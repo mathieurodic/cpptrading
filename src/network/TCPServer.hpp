@@ -112,6 +112,7 @@ public:
         try {
             while (replier->_is_running && replier->_handler.callback(*replier)) {
                 replier->ensure_is_not_closed();
+                usleep(1);
             }
         } catch (TCPConnectionClosedException) {
             replier->_is_running = false;
