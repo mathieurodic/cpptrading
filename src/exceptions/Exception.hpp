@@ -37,6 +37,11 @@ protected:
 };
 
 
+class FileException : public Exception {
+    using Exception::Exception;
+};
+
+
 class DBException : public Exception {
     using Exception::Exception;
 };
