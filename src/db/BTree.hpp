@@ -10,6 +10,7 @@
 #include <ups/upscaledb.h>
 
 #include "exceptions/Exception.hpp"
+#include "IO/directories.hpp"
 
 
 class UpscaleDBException : public DBException {
@@ -206,6 +207,8 @@ public:
         _enable_duplicates(enable_duplicates),
         _cache_size(cache_size)
     {
+        // create directory
+        make_directory(extract_directory(path));
         // create environment
         static const ups_parameter_t ups_env_parameters[] = {
             {UPS_PARAM_CACHE_SIZE, _cache_size},

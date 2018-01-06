@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& os, test_t test) {
 
 
 int main(int argc, char const *argv[]) {
-    std::string btree_path = "/tmp/test-btree.btree";
+    std::string btree_path = "/tmp/ctrading/test/btree.btree";
     UPSCALE_BTREE(test_t, c) btree(btree_path);
 
     printf("\nInstanciating tests\n");
