@@ -234,7 +234,7 @@ public:
             _ups_env,
             &_ups_db,
             1, // name
-            (enable_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
+            (_enable_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
             ups_db_parameters
         );
     }
@@ -262,7 +262,7 @@ public:
                 NULL, // transaction
                 &ups_key,
                 &ups_record,
-                0 // flags
+                (_enable_duplicates ? UPS_DUPLICATE : 0) // flags
             );
         } catch (const UpscaleDBException& exception) {
             if (exception.get_status() == UPS_DUPLICATE_KEY) {

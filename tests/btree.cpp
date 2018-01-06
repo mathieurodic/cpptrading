@@ -70,7 +70,33 @@ int main(int argc, char const *argv[]) {
     printf("\nRetrieving non-existing keys\n");
     std::cout << btree.get_ge(-1.0) << '\n';
     std::cout << btree.get_le(1e9) << '\n';
-    std::cout << btree.get(-1.0) << '\n';
+    try {
+        std::cout << btree.get(-1.0) << '\n';
+    } catch (const DBKeyException& exception) {
+        std::cout << "could not retrieve key '-1'" << '\n';
+    }
+
+    printf("\nTry with duplicates\n");
+    {
+        std::string btree_path = "/tmp/ctrading/test/btree.dup.btree";
+        UPSCALE_BTREE(test_t, c) btree(btree_path, true);
+        for (int i=0; i<32; ++i) {
+            test_t test = {
+                .a = i,
+                .b = i,
+                .c = i,
+                .d = i,
+            };
+            btree.insert(test);
+            if (i < 16) {
+                btree.insert(test);
+            }
+        }
+        for (const auto& test : btree.get_all()) {
+            std::cout << test << '\n';
+        }
+    }
+
 
     return 0;
 }
