@@ -201,10 +201,9 @@ template <typename key_t, size_t key_offset, typename record_t>
 class UpscaleBTree {
 public:
 
-    UpscaleBTree(const std::string& path, const bool enable_duplicates=false, const bool readonly=false, const size_t cache_size=1<<24) :
+    UpscaleBTree(const std::string& path, const bool enable_duplicates=false, const size_t cache_size=1<<24) :
         _path(path),
         _enable_duplicates(enable_duplicates),
-        _readonly(readonly),
         _cache_size(cache_size)
     {
         // create environment
@@ -338,7 +337,6 @@ protected:
 
     // parameters
     std::string _path;
-    bool _readonly;
     bool _enable_duplicates;
     size_t _cache_size;
     // internals
