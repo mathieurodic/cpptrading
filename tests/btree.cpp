@@ -1,4 +1,4 @@
-#include "db/BTree.hpp"
+#include "db/UpscaleBTree.hpp"
 
 #include <iostream>
 #include <string>
@@ -65,6 +65,20 @@ int main(int argc, char const *argv[]) {
     // }
     for (const auto& test : btree.get_range(9, 12)) {
         std::cout << test << '\n';
+    }
+
+    printf("\nTest existence\n");
+    {
+        std::vector<int> values = {-4, -6, 87, 21, 1, 0, 3, 999, 1<<18};
+        for (auto value : values) {
+            test_t test = {
+                .a = value,
+                .b = value,
+                .c = value,
+                .d = value,
+            };
+            std::cout << value << ": " << (btree.contains(test) ? "true" : "false") << '\n';
+        }
     }
 
     printf("\nRetrieving non-existing keys\n");

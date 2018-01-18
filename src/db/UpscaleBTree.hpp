@@ -322,6 +322,69 @@ public:
         return UpscaleBTreeRange<key_t, record_t>(_ups_db, key_begin, key_end);
     }
 
+    inline const bool contains(record_t& searched_record) {
+        // extract key
+        char* searched_record_pointer = (char*) &searched_record;
+        key_t& searched_key = * (key_t*) (searched_record_pointer + key_offset);
+        // initialize UPS key & record
+        record_t record;
+        ups_record_t ups_record = {
+            .size = sizeof(record_t),
+            .data = &record,
+            .flags = UPS_RECORD_USER_ALLOC,
+        };
+        char* record_pointer = (char*) &record;
+        key_t& key = * (key_t*) (record_pointer + key_offset);
+        memcpy(&key, &searched_key, sizeof(key_t));
+        ups_key_t ups_key = {
+            .size = sizeof(key_t),
+            .data = &key,
+            .flags = UPS_RECORD_USER_ALLOC,
+        };
+        // create cursor & start it
+        ups_cursor_t* ups_cursor;
+        UPS_SAFE_CALL(ups_cursor_create,
+            &ups_cursor,
+            _ups_db,
+            0, // transaction
+            0 // flags (unused)
+        );
+        try {
+            UPS_SAFE_CALL(ups_cursor_find,
+                ups_cursor,
+                &ups_key,
+                &ups_record,
+                UPS_FIND_GEQ_MATCH
+            );
+        } catch (const UpscaleDBException& exception) {
+            if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
+                return false;
+            }
+        }
+        // test until record is found... or not
+        do {
+            if (key > searched_key) {
+                return false;
+            }
+            if (record == searched_record) {
+                return true;
+            }
+            try {
+                UPS_SAFE_CALL(ups_cursor_move,
+                    ups_cursor,
+                    &ups_key,
+                    &ups_record,
+                    UPS_CURSOR_NEXT
+                );
+            } catch (const UpscaleDBException& exception) {
+                if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER) {
+                    return false;
+                }
+                throw exception;
+            }
+        } while (true);
+    }
+
 protected:
 
     inline static uint64_t get_parameter_key_type() {
