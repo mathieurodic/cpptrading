@@ -172,8 +172,8 @@ public:
     UpscaleBTreeRange(ups_db_t* ups_db, key_t key_begin, key_t key_end) :
         UpscaleBTreeRange(ups_db)
     {
-        _key_begin = key_begin;
-        _key_end = key_end;
+        memcpy(&_key_begin, &key_begin, sizeof(key_t));
+        memcpy(&_key_end, &key_end, sizeof(key_t));
         _is_fullrange = false;
     }
 
@@ -225,7 +225,14 @@ public:
         );
         // create database
         static const ups_parameter_t ups_db_parameters[] = {
-            {UPS_PARAM_KEY_TYPE, get_parameter_key_type()},
+            {
+                UPS_PARAM_KEY_TYPE,
+                get_parameter_key_type()
+            },
+            {
+                (get_parameter_key_type() == UPS_TYPE_BINARY) ? UPS_PARAM_KEY_SIZE : 0,
+                (get_parameter_key_type() == UPS_TYPE_BINARY) ? sizeof(key_t) : 0
+            },
             // {UPS_PARAM_PAGE_SIZE, 4096},
             // {UPS_PARAM_JOURNAL_COMPRESSION, UPS_COMPRESSOR_SNAPPY},
             {0, 0}
@@ -461,18 +468,19 @@ public:
 protected:
 
     inline static uint64_t get_parameter_key_type() {
-        return get_parameter_key_type((key_t*) NULL);
+        return get_parameter_key_type(* (key_t*) NULL);
     }
-    inline static uint64_t get_parameter_key_type(int8_t* key) { return UPS_TYPE_UINT8; }
-    inline static uint64_t get_parameter_key_type(uint8_t* key) { return UPS_TYPE_UINT8; }
-    inline static uint64_t get_parameter_key_type(int16_t* key) { return UPS_TYPE_UINT16; }
-    inline static uint64_t get_parameter_key_type(uint16_t* key) { return UPS_TYPE_UINT16; }
-    inline static uint64_t get_parameter_key_type(int32_t* key) { return UPS_TYPE_UINT32; }
-    inline static uint64_t get_parameter_key_type(uint32_t* key) { return UPS_TYPE_UINT32; }
-    inline static uint64_t get_parameter_key_type(int64_t* key) { return UPS_TYPE_UINT64; }
-    inline static uint64_t get_parameter_key_type(uint64_t* key) { return UPS_TYPE_UINT64; }
-    inline static uint64_t get_parameter_key_type(float* key) { return UPS_TYPE_REAL32; }
-    inline static uint64_t get_parameter_key_type(double* key) { return UPS_TYPE_REAL64; }
+    inline static uint64_t get_parameter_key_type(int8_t&) { return UPS_TYPE_UINT8; }
+    inline static uint64_t get_parameter_key_type(uint8_t&) { return UPS_TYPE_UINT8; }
+    inline static uint64_t get_parameter_key_type(int16_t&) { return UPS_TYPE_UINT16; }
+    inline static uint64_t get_parameter_key_type(uint16_t&) { return UPS_TYPE_UINT16; }
+    inline static uint64_t get_parameter_key_type(int32_t&) { return UPS_TYPE_UINT32; }
+    inline static uint64_t get_parameter_key_type(uint32_t&) { return UPS_TYPE_UINT32; }
+    inline static uint64_t get_parameter_key_type(int64_t&) { return UPS_TYPE_UINT64; }
+    inline static uint64_t get_parameter_key_type(uint64_t&) { return UPS_TYPE_UINT64; }
+    inline static uint64_t get_parameter_key_type(float&) { return UPS_TYPE_REAL32; }
+    inline static uint64_t get_parameter_key_type(double&) { return UPS_TYPE_REAL64; }
+    template <typename T> inline static uint64_t get_parameter_key_type(T&) { return UPS_TYPE_BINARY; }
 
     // parameters
     std::string _path;
