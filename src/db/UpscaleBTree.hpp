@@ -202,10 +202,11 @@ template <typename key_t, size_t key_offset, typename record_t>
 class UpscaleBTree {
 public:
 
-    UpscaleBTree(const std::string& path, const bool enable_duplicates=false, const size_t cache_size=1<<24) :
+    UpscaleBTree(const std::string& path, const bool allow_duplicates=false, const size_t cache_size=1<<24, const bool autocommit=false) :
         _path(path),
-        _enable_duplicates(enable_duplicates),
-        _cache_size(cache_size)
+        _allow_duplicates(allow_duplicates),
+        _cache_size(cache_size),
+        _autocommit(autocommit)
     {
         // create directory
         make_directory(extract_directory(path));
@@ -219,7 +220,7 @@ public:
         UPS_SAFE_CALL(ups_env_create,
             &_ups_env,
             _path.c_str(),
-            0, // UPS_ENABLE_FSYNC | UPS_ENABLE_TRANSACTIONS
+            UPS_ENABLE_TRANSACTIONS  |  (_autocommit ? UPS_ENABLE_FSYNC : 0),
             0644,
             ups_env_parameters
         );
@@ -241,7 +242,7 @@ public:
             _ups_env,
             &_ups_db,
             1, // name
-            (_enable_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
+            (_allow_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
             ups_db_parameters
         );
     }
@@ -269,7 +270,7 @@ public:
                 NULL, // transaction
                 &ups_key,
                 &ups_record,
-                (_enable_duplicates ? UPS_DUPLICATE : 0) // flags
+                (_allow_duplicates ? UPS_DUPLICATE : 0) // flags
             );
         } catch (const UpscaleDBException& exception) {
             if (exception.get_status() == UPS_DUPLICATE_KEY) {
@@ -484,7 +485,8 @@ protected:
 
     // parameters
     std::string _path;
-    bool _enable_duplicates;
+    bool _allow_duplicates;
+    bool _autocommit;
     size_t _cache_size;
     // internals
     ups_env_t* _ups_env;
