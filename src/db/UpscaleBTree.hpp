@@ -322,7 +322,10 @@ public:
         return UpscaleBTreeRange<key_t, record_t>(_ups_db, key_begin, key_end);
     }
 
-    inline const bool contains(record_t& searched_record) {
+    inline const size_t contains(record_t& searched_record) {
+        return count(searched_record, true);
+    }
+    inline const size_t count(record_t& searched_record, const bool& stop_at_first=false) {
         // extract key
         char* searched_record_pointer = (char*) &searched_record;
         key_t& searched_key = * (key_t*) (searched_record_pointer + key_offset);
@@ -358,16 +361,20 @@ public:
             );
         } catch (const UpscaleDBException& exception) {
             if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
-                return false;
+                return 0;
             }
         }
         // test until record is found... or not
+        size_t count = 0;
         do {
             if (key > searched_key) {
-                return false;
+                return count;
             }
             if (record == searched_record) {
-                return true;
+                ++count;
+                if (stop_at_first) {
+                    return count;
+                }
             }
             try {
                 UPS_SAFE_CALL(ups_cursor_move,
@@ -378,7 +385,73 @@ public:
                 );
             } catch (const UpscaleDBException& exception) {
                 if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER) {
-                    return false;
+                    return count;
+                }
+                throw exception;
+            }
+        } while (true);
+    }
+    inline const size_t contains(key_t& searched_key) {
+        return count(searched_key, true);
+    }
+    inline const size_t count(key_t& searched_key, const bool& stop_at_first=false) {
+        // initialize UPS key & record
+        record_t record;
+        ups_record_t ups_record = {
+            .size = sizeof(record_t),
+            .data = &record,
+            .flags = UPS_RECORD_USER_ALLOC,
+        };
+        char* record_pointer = (char*) &record;
+        key_t& key = * (key_t*) (record_pointer + key_offset);
+        memcpy(&key, &searched_key, sizeof(key_t));
+        ups_key_t ups_key = {
+            .size = sizeof(key_t),
+            .data = &key,
+            .flags = UPS_RECORD_USER_ALLOC,
+        };
+        // create cursor & start it
+        ups_cursor_t* ups_cursor;
+        UPS_SAFE_CALL(ups_cursor_create,
+            &ups_cursor,
+            _ups_db,
+            0, // transaction
+            0 // flags (unused)
+        );
+        try {
+            UPS_SAFE_CALL(ups_cursor_find,
+                ups_cursor,
+                &ups_key,
+                &ups_record,
+                UPS_FIND_GEQ_MATCH
+            );
+        } catch (const UpscaleDBException& exception) {
+            if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
+                return 0;
+            }
+        }
+        // test until record is found... or not
+        size_t count = 0;
+        do {
+            if (key > searched_key) {
+                return count;
+            }
+            if (key == searched_key) {
+                ++count;
+                if (stop_at_first) {
+                    return count;
+                }
+            }
+            try {
+                UPS_SAFE_CALL(ups_cursor_move,
+                    ups_cursor,
+                    &ups_key,
+                    &ups_record,
+                    UPS_CURSOR_NEXT
+                );
+            } catch (const UpscaleDBException& exception) {
+                if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER) {
+                    return count;
                 }
                 throw exception;
             }

@@ -67,9 +67,9 @@ int main(int argc, char const *argv[]) {
         std::cout << test << '\n';
     }
 
-    printf("\nTest existence\n");
+    printf("\nCount records & keys\n");
     {
-        std::vector<int> values = {-4, -6, 87, 21, 1, 0, 3, 999, 1<<18};
+        std::vector<float> values = {-4, -6, 87, 21, 1, 0, 3, 999, 1<<18};
         for (auto value : values) {
             test_t test = {
                 .a = value,
@@ -77,7 +77,7 @@ int main(int argc, char const *argv[]) {
                 .c = value,
                 .d = value,
             };
-            std::cout << value << ": " << (btree.contains(test) ? "true" : "false") << '\n';
+            std::cout << value << ": " << btree.count(test) << ", " << btree.count(value) << ", " << (btree.contains(value) ? "true" : "false") << '\n';
         }
     }
 
