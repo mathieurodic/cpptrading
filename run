@@ -5,6 +5,6 @@ OUTPUT_PATH="${OUTPUT_PATH%.*}"
 OUTPUT_DIR="$(dirname "${OUTPUT_PATH}")"
 
 mkdir -p "${OUTPUT_DIR}"
-time g++ -std=c++17 -O2 -Isrc "${INPUT_PATH}" -lpthread -lupscaledb -lstdc++fs -lz -Wno-narrowing -o "${OUTPUT_PATH}" \
+time g++ --short-enums -std=c++17 -O2 -Isrc "${INPUT_PATH}" -lpthread -lupscaledb -lstdc++fs -lz -Wno-narrowing -o "${OUTPUT_PATH}" \
     && echo && time ./${OUTPUT_PATH}
 exit $?
