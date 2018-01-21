@@ -333,7 +333,7 @@ public:
     inline const size_t contains(record_t& searched_record) {
         return count(searched_record, true);
     }
-    inline const size_t count(record_t& searched_record, const bool& stop_at_first=false) {
+    inline const size_t count(const record_t& searched_record, const bool& stop_at_first=false) {
         // extract key
         char* searched_record_pointer = (char*) &searched_record;
         key_t& searched_key = * (key_t*) (searched_record_pointer + key_offset);
@@ -402,7 +402,7 @@ public:
     inline const size_t contains(key_t& searched_key) {
         return count(searched_key, true);
     }
-    inline const size_t count(key_t& searched_key, const bool& stop_at_first=false) {
+    inline const size_t count(const key_t& searched_key, const bool& stop_at_first=false) {
         // initialize UPS key & record
         record_t record;
         ups_record_t ups_record = {
