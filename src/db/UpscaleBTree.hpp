@@ -252,6 +252,10 @@ public:
             _ups_env, UPS_AUTO_CLEANUP);
     }
 
+    inline const std::string& get_path() const {
+        return _path;
+    }
+
     inline void insert(record_t& record) {
         char* record_pointer = (char*) &record;
         ups_key_t ups_key = {
