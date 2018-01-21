@@ -62,8 +62,8 @@ protected:
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_ge) \
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_gt) \
     inline const size_t contains_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.contains(searched_record); } \
-    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_all_by_##PROPERTY() { return _index_##PROPERTY.get_all(); } \
-    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_range_by_##PROPERTY(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
+    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get_all(); } \
+    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_range(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
 
 #define INDEXED_STORAGE(CLASS, PROPERTY) \
     class IndexedStorage##__##CLASS##_##PROPERTY : public IndexedStorage<CLASS> { \
