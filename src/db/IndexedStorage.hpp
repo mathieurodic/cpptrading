@@ -28,18 +28,7 @@ public:
         record_t record;
         GzipLogReader reader(_logger_path);
         while (reader.next(record) == sizeof(record)) {
-            ++log_records[record];
-        }
-        // extract records and their count from index
-        std::map<record_t, size_t> index_records;
-        for (record_t record : index.get_all()) {
-            ++index_records[record];
-        }
-        // compare counts
-        for (const auto& record_count : log_records) {
-            size_t count = index_records[record_count.first];
-            if (count != record_count.second) {
-                std::cerr << "Expected " << record_count.first << " " << record_count.second << " time(s)" << ", found " << count << " time(s) in " << index.get_path() << "\n";
+            if (index.count(record) < 1) {
                 return false;
             }
         }
