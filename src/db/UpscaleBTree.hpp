@@ -43,7 +43,8 @@ public:
         _ups_db(ups_db),
         _ups_cursor(NULL),
         _is_fullrange(is_fullrange),
-        _is_reverse(key_end < key_begin),
+        _is_reverse(is_fullrange ? false : (key_end < key_begin)),
+        _is_finished(false),
         _key(key_begin),
         _key_begin(key_begin),
         _key_end(key_end),
@@ -334,7 +335,7 @@ public:
         return UpscaleBTreeRange<key_t, record_t>(_ups_db, key_begin, key_end);
     }
 
-    inline const size_t contains(record_t& searched_record) {
+    inline const bool contains(record_t& searched_record) {
         return count(searched_record, true);
     }
     inline const size_t count(const record_t& searched_record, const bool& stop_at_first=false) {
@@ -403,7 +404,7 @@ public:
             }
         } while (true);
     }
-    inline const size_t contains(key_t& searched_key) {
+    inline const bool contains(key_t& searched_key) {
         return count(searched_key, true);
     }
     inline const size_t count(const key_t& searched_key, const bool& stop_at_first=false) {
