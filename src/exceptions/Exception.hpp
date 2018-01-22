@@ -41,6 +41,10 @@ class FileException : public Exception {
     using Exception::Exception;
 };
 
+class NetworkException : public Exception {
+    using Exception::Exception;
+};
+
 
 class DBException : public Exception {
     using Exception::Exception;
