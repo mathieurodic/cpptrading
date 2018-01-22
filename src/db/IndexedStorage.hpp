@@ -3,6 +3,7 @@
 
 
 #include <string>
+#include <map>
 
 #include "./GzipLog.hpp"
 #include "./UpscaleBTree.hpp"
@@ -21,10 +22,24 @@ public:
     }
 
     template <typename key_t, size_t key_offset>
-    inline bool integrity_check(UpscaleBTree<key_t, key_offset, record_t>& index) {
+    inline const bool integrity_check(UpscaleBTree<key_t, key_offset, record_t>& index) {
+        // extract records and their count from log
+        std::map<record_t, size_t> log_records;
         record_t record;
-        while (index.next(record) == sizeof(record)) {
-            if (!index.contains(record)) {
+        GzipLogReader reader(_logger_path);
+        while (reader.next(record) == sizeof(record)) {
+            ++log_records[record];
+        }
+        // extract records and their count from index
+        std::map<record_t, size_t> index_records;
+        for (record_t record : index.get_all()) {
+            ++index_records[record];
+        }
+        // compare counts
+        for (const auto& record_count : log_records) {
+            size_t count = index_records[record_count.first];
+            if (count != record_count.second) {
+                std::cerr << "Expected " << record_count.first << " " << record_count.second << " time(s)" << ", found " << count << " time(s) in " << index.get_path() << "\n";
                 return false;
             }
         }
@@ -38,7 +53,6 @@ public:
 protected:
     const std::string _path;
     const std::string _logger_path;
-    // const std::string _index_path;
     GzipLogWriter _logger;
 };
 
@@ -61,7 +75,8 @@ protected:
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_lt) \
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_ge) \
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_gt) \
-    inline const size_t contains_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.contains(searched_record); } \
+    inline const bool contains_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.contains(searched_record); } \
+    inline const size_t count_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.count(searched_record); } \
     inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get_all(); } \
     inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_range(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
 
@@ -74,6 +89,9 @@ protected:
         inline void insert(CLASS& record) { \
             _logger.append(record); \
             _index_##PROPERTY.insert(record); \
+        } \
+        inline const bool integrity_check() { \
+            return this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY); \
         } \
         INDEXED_STORAGE_GETTERS(PROPERTY, typeofproperty(CLASS, PROPERTY), CLASS) \
     protected: \
@@ -91,6 +109,9 @@ protected:
             _logger.append(record); \
             _index_##PROPERTY1.insert(record); \
             _index_##PROPERTY2.insert(record); \
+        } \
+        inline const bool integrity_check() { \
+            return this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY1) && this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY2); \
         } \
         INDEXED_STORAGE_GETTERS(PROPERTY2, typeofproperty(CLASS, PROPERTY2), CLASS) \
     protected: \
