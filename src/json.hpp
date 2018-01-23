@@ -29,6 +29,8 @@ SOFTWARE.
 #ifndef NLOHMANN_JSON_HPP
 #define NLOHMANN_JSON_HPP
 
+#include "exceptions/Exception.hpp" // KeyException
+
 #include <algorithm> // all_of, find, for_each
 #include <cassert> // assert
 #include <ciso646> // and, not, or
@@ -12278,7 +12280,9 @@ class basic_json
         // const operator[] only works for objects
         if (JSON_LIKELY(is_object()))
         {
-            assert(m_value.object->find(key) != m_value.object->end());
+            if (m_value.object->find(key) == m_value.object->end()) {
+                throw KeyException(key);
+            }
             return m_value.object->find(key)->second;
         }
 
@@ -12368,7 +12372,9 @@ class basic_json
         // at only works for objects
         if (JSON_LIKELY(is_object()))
         {
-            assert(m_value.object->find(key) != m_value.object->end());
+            if (m_value.object->find(key) == m_value.object->end()) {
+                throw KeyException(key);
+            }
             return m_value.object->find(key)->second;
         }
 

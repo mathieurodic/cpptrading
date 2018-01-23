@@ -21,6 +21,9 @@ public:
 
 protected:
 
+    inline std::string concatenate() {
+        return "";
+    }
     template<typename T>
     inline std::string concatenate(const T& t) {
         std::stringstream string_stream;
@@ -34,6 +37,11 @@ protected:
     }
 
     const std::string _what;
+};
+
+
+class KeyException : public Exception {
+    using Exception::Exception;
 };
 
 
@@ -53,7 +61,7 @@ class DBException : public Exception {
 class DBDuplicateException : public DBException {
     using DBException::DBException;
 };
-class DBKeyException : public DBException {
+class DBKeyException : public DBException, public KeyException {
     using DBException::DBException;
 };
 
