@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "./ActionType.hpp"
+#include "./Timestamp.hpp"
 
 
 #pragma pack(push, 1)
@@ -21,6 +22,29 @@ struct Trade {
 };
 
 #pragma pack(pop)
+
+
+#include <ostream>
+#include <iomanip>
+#include <string>
+
+inline std::ostream& operator << (std::ostream& os, const Trade& trade) {
+    std::string decimals = std::to_string((int)(100.0 * trade.price) % 100);
+    if (decimals.size() < 2) {
+        decimals += '0';
+    }
+    return (os
+        << "<Trade"
+        << " id=" << trade.id
+        << " buy_order_id=" << trade.buy_order_id
+        << " sell_order_id=" << trade.sell_order_id
+        << " timestamp=" << Timestamp<double>(trade.timestamp)
+        << " type=" << trade.type
+        << " price=" << (int)(trade.price) << '.' << decimals
+        << " volume=" << trade.volume
+        << ">"
+    );
+}
 
 
 #endif // CTRADING__MODELS__TRADE__HPP

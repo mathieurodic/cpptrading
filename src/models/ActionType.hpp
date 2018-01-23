@@ -15,10 +15,10 @@ enum ActionType {
 
 inline std::ostream& operator << (std::ostream& os, const ActionType type) {
     switch (type) {
-        case BUY: return (os << "BUY");
+        case BUY: return (os << "BUY ");
         case WAIT: return (os << "WAIT");
         case SELL: return (os << "SELL");
-        default: return (os << "?");
+        default: return (os << "????");
     }
 }
 
