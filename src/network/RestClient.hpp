@@ -32,7 +32,7 @@ inline std::ostream& operator << (std::ostream& os, const RestResponse& rest_res
 class RestClient {
 public:
 
-    inline RestClient(const std::string& base_url) :
+    inline RestClient(const std::string& base_url="") :
         _base_url(base_url),
         _headers(NULL),
         _headers_nopayload(NULL),

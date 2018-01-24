@@ -4,6 +4,10 @@
 
 
 int main(int argc, char const *argv[]) {
+    {
+        std::cout << "GET (without base_url)\n";
+        std::cout << RestClient().get("https://jsonplaceholder.typicode.com/posts/1") << "\n\n\n\n";
+    }
     RestClient client("https://jsonplaceholder.typicode.com");
     std::cout << "POST\n";
     std::cout << client.post("/posts", {{"title", "foo"}, {"body", "bar"}, {"userId", 1}}) << "\n\n";
