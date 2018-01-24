@@ -61,6 +61,9 @@ public:
             _subscriptions.insert({event, {channel_name, callable, user_data}});
         }
     }
+    inline void unsubscribe() {
+        _subscriptions.clear();
+    }
 
     static void _start(PusherConnection* pusher_connection) {
         while (pusher_connection->_is_running) {
