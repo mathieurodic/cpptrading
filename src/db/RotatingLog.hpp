@@ -155,4 +155,10 @@ private:
 };
 
 
+struct RotatingLog {
+    typedef RotatingLogWriter Writer;
+    typedef RotatingLogReader Reader;
+};
+
+
 #endif // CTRADING__DB__ROTATINGLOG__HPP

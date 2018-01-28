@@ -92,4 +92,10 @@ private:
 };
 
 
+struct GzipLog {
+    typedef GzipLogWriter Writer;
+    typedef GzipLogReader Reader;
+};
+
+
 #endif // CTRADING__DB__GZIPLOG__HPP
