@@ -11,6 +11,9 @@
 #include <tbb/concurrent_hash_map.h>
 
 #include "db/IndexedStorage.hpp"
+#include "db/RotatingLog.hpp"
+#include "db/UpscaleBTree.hpp"
+
 #include "models/Trade.hpp"
 #include "models/Order.hpp"
 #include "models/Decision.hpp"
@@ -24,14 +27,14 @@ public:
         _basepath(basepath),
         _currency_pair(currency_pair),
         _is_running(true),
-        _cleanup_period(1.0),
-        _cleanup_threshold(5.0),
+        _cleanup_period(10.0),
+        _cleanup_threshold(60.0),
         _cleanup_thread(std::thread(_cleanup, this)),
         last_timestamp(0.0),
-        trades(basepath + "/trades.btree", true, true),
-        orders(basepath + "/orders.btree", true),
-        decisions(basepath + "/decisions.btree", true),
-        averages(basepath + "/averages.btree", true)
+        trades(basepath + "/trades"),
+        orders(basepath + "/orders"),
+        decisions(basepath + "/decisions"),
+        averages(basepath + "/averages")
     {}
     inline ~History() {
         _is_running = false;
@@ -74,12 +77,21 @@ public:
         }
     }
 
-    inline void trade_insert(const Trade& trade) {
+    inline void trade_insert(Trade trade) {
         if (trade.timestamp > last_timestamp) {
             last_timestamp = trade.timestamp;
         }
-        // trades.insert(trade);
+        trades.insert(trade);
+        Order buy_order = order_get(trade.buy_order_id);
+        if (buy_order.id) {
+            orders.insert(buy_order);
+        }
+        Order sell_order = order_get(trade.sell_order_id);
+        if (sell_order.id) {
+            orders.insert(sell_order);
+        }
     }
+
     inline void order_insert(const Order& order) {
         if (order.timestamp > last_timestamp) {
             last_timestamp = order.timestamp;
@@ -87,8 +99,6 @@ public:
         current_orders_t::accessor it;
         if (current_orders.find(it, order.id)) {
             it->second.push_back(order);
-            it.release();
-            return;
         } else {
             current_orders.insert({order.id, {order}});
         }
@@ -97,6 +107,22 @@ public:
         order_insert(order);
     }
     inline void order_delete(const Order& order) {
+        current_orders_t::accessor it;
+        if (current_orders.find(it, order.id)) {
+            std::vector<Order> orders = it->second;
+            bool is_found = false;
+            for (const Order& o : orders) {
+                if (o.amount == order.amount && o.type == order.type && o.price == order.price) {
+                    is_found = true;
+                    break;
+                }
+            }
+            if (!is_found) {
+                orders.push_back(order);
+            }
+        } else {
+            current_orders.insert({order.id, {order}});
+        }
         deleted_orders_ids.insert(order.id);
     }
     inline const Order order_get(const uint64_t& id, const double& timestamp) {
@@ -115,10 +141,10 @@ public:
         return order_get(id, last_timestamp);
     }
 
-    INDEXED_STORAGE_2(Trade, id, timestamp) trades;
-    INDEXED_STORAGE(Order, id) orders;
-    INDEXED_STORAGE(Decision, timestamp) decisions;
-    INDEXED_STORAGE(TradeAverage, timestamp_range) averages;
+    INDEXED_STORAGE_2(Trade, id, timestamp, RotatingLog, UpscaleBTree) trades;
+    INDEXED_STORAGE(Order, id, RotatingLog, UpscaleBTree) orders;
+    INDEXED_STORAGE(Decision, timestamp, RotatingLog, UpscaleBTree) decisions;
+    INDEXED_STORAGE(TradeAverage, timestamp_range, RotatingLog, UpscaleBTree) averages;
     typedef tbb::concurrent_hash_map<uint64_t, std::vector<Order>> current_orders_t;
     current_orders_t current_orders;
     std::set<uint64_t> deleted_orders_ids;

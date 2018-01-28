@@ -4,29 +4,32 @@
 
 #include <string>
 #include <map>
+#include <experimental/tuple>
 
-#include "./GzipLog.hpp"
-#include "./UpscaleBTree.hpp"
+#include "IO/directories.hpp"
 
 
-template <typename record_t>
+
+template <typename record_t, typename logger_t>
 class IndexedStorage {
 public:
 
     inline IndexedStorage(const std::string& path) :
         _path(path),
-        _logger_path(path + ".log.gz"),
-        _logger(_logger_path)
-    {
+        _path_is_initialized(init_directory(_path)),
+        _logger_path(path + "/log"),
+        _logger_writer(_logger_path)
+    {}
 
+    inline bool init_directory(const std::string& path) {
+        make_directory(path);
+        return true;
     }
 
-    template <typename key_t, size_t key_offset>
-    inline const bool integrity_check(UpscaleBTree<key_t, key_offset, record_t>& index) {
-        // extract records and their count from log
-        std::map<record_t, size_t> log_records;
+    template <typename index_t>
+    inline const bool integrity_check(index_t& index) {
         record_t record;
-        GzipLogReader reader(_logger_path);
+        typename logger_t::Reader reader(_logger_path);
         while (reader.next(record) == sizeof(record)) {
             if (index.count(record) < 1) {
                 return false;
@@ -35,15 +38,13 @@ public:
         return true;
     }
 
-    template <typename key_t, size_t key_offset>
-    inline bool integrity_ensure(UpscaleBTree<key_t, key_offset, record_t>& index) {
-    }
-
 protected:
     const std::string _path;
+    const bool _path_is_initialized;
     const std::string _logger_path;
-    GzipLogWriter _logger;
+    typename logger_t::Writer _logger_writer;
 };
+
 
 
 #ifndef typeof
@@ -53,6 +54,10 @@ protected:
 #ifndef typeofproperty
 #define typeofproperty(CLASS, PROPERTY) typeof( ((CLASS*) NULL)->PROPERTY )
 #endif // typeofproperty
+
+#ifndef offsetofproperty
+#define offsetofproperty(CLASS, PROPERTY) ( (char*) &(((CLASS*) NULL)->PROPERTY) - (char*) NULL )
+#endif // offsetofproperty
 
 
 #define INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, METHOD) \
@@ -69,42 +74,44 @@ protected:
     inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get_all(); } \
     inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_range(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
 
-#define INDEXED_STORAGE(CLASS, PROPERTY) \
-    class IndexedStorage##__##CLASS##_##PROPERTY : public IndexedStorage<CLASS> { \
+#define INDEXED_STORAGE(CLASS, PROPERTY, LOGGER, INDEX) \
+    class IndexedStorage##__##CLASS##_##PROPERTY : public IndexedStorage<CLASS, LOGGER> { \
     public: \
-        inline IndexedStorage##__##CLASS##_##PROPERTY(const std::string& path, const bool PROPERTY##_enable_duplicates=false, const size_t PROPERTY##_cache_size=1<<24, const bool PROPERTY##_autocommit=false) : \
-            IndexedStorage<CLASS>(path), \
-            _index_##PROPERTY(path + ".index." + #PROPERTY, PROPERTY##_enable_duplicates, PROPERTY##_cache_size, PROPERTY##_autocommit) {} \
+        inline IndexedStorage##__##CLASS##_##PROPERTY(const std::string& path) : \
+            IndexedStorage<CLASS, LOGGER>(path), \
+            _index_##PROPERTY(path + "/index." + #PROPERTY) {} \
         inline void insert(CLASS& record) { \
-            _logger.append(record); \
+            _logger_writer.append(record); \
             _index_##PROPERTY.insert(record); \
         } \
-        inline const bool integrity_check() { \
-            return this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY); \
-        } \
         INDEXED_STORAGE_GETTERS(PROPERTY, typeofproperty(CLASS, PROPERTY), CLASS) \
+        const bool integrity_check() { \
+            return IndexedStorage<CLASS, LOGGER>::integrity_check(_index_##PROPERTY); \
+        } \
     protected: \
-        UPSCALE_BTREE(CLASS, PROPERTY) _index_##PROPERTY; \
+        INDEX<typeofproperty(CLASS, PROPERTY), offsetofproperty(CLASS, PROPERTY), CLASS> _index_##PROPERTY; \
     }
 
-#define INDEXED_STORAGE_2(CLASS, PROPERTY1, PROPERTY2) \
-    INDEXED_STORAGE(CLASS, PROPERTY1); \
-    class IndexedStorage##__##CLASS##_##PROPERTY2##_##PROPERTY2 : public IndexedStorage##__##CLASS##_##PROPERTY1 { \
+#define INDEXED_STORAGE_2(CLASS, PROPERTY1, PROPERTY2, LOGGER, INDEX) \
+    class IndexedStorage##__##CLASS##_##PROPERTY1##__##PROPERTY2 : public IndexedStorage<CLASS, LOGGER> { \
     public: \
-        inline IndexedStorage##__##CLASS##_##PROPERTY2##_##PROPERTY2(const std::string& path, const bool PROPERTY1##_enable_duplicates=false, const bool PROPERTY2##_enable_duplicates=false, const size_t PROPERTY1##_cache_size=1<<24, const size_t PROPERTY2##_cache_size=1<<24, const bool PROPERTY1##_autocommit=false, const bool PROPERTY2##_autocommit=false) : \
-            IndexedStorage##__##CLASS##_##PROPERTY1(path, PROPERTY1##_enable_duplicates, PROPERTY1##_cache_size, PROPERTY1##_autocommit), \
-            _index_##PROPERTY2(path + ".index." + #PROPERTY2, PROPERTY2##_enable_duplicates, PROPERTY2##_cache_size, PROPERTY2##_autocommit) {} \
+        inline IndexedStorage##__##CLASS##_##PROPERTY1##__##PROPERTY2(const std::string& path) : \
+            IndexedStorage<CLASS, LOGGER>(path), \
+            _index_##PROPERTY1(path + "/index." + #PROPERTY1), \
+            _index_##PROPERTY2(path + "/index." + #PROPERTY2) {} \
         inline void insert(CLASS& record) { \
-            _logger.append(record); \
+            _logger_writer.append(record); \
             _index_##PROPERTY1.insert(record); \
             _index_##PROPERTY2.insert(record); \
         } \
-        inline const bool integrity_check() { \
-            return this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY1) && this->IndexedStorage<CLASS>::integrity_check(_index_##PROPERTY2); \
-        } \
+        INDEXED_STORAGE_GETTERS(PROPERTY1, typeofproperty(CLASS, PROPERTY1), CLASS) \
         INDEXED_STORAGE_GETTERS(PROPERTY2, typeofproperty(CLASS, PROPERTY2), CLASS) \
+        const bool integrity_check() { \
+            return IndexedStorage<CLASS, LOGGER>::integrity_check(_index_##PROPERTY1) && IndexedStorage<CLASS, LOGGER>::integrity_check(_index_##PROPERTY2); \
+        } \
     protected: \
-        UPSCALE_BTREE(CLASS, PROPERTY2) _index_##PROPERTY2; \
+        INDEX<typeofproperty(CLASS, PROPERTY1), offsetofproperty(CLASS, PROPERTY1), CLASS> _index_##PROPERTY1; \
+        INDEX<typeofproperty(CLASS, PROPERTY2), offsetofproperty(CLASS, PROPERTY2), CLASS> _index_##PROPERTY2; \
     }
 
 

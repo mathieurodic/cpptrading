@@ -203,7 +203,7 @@ template <typename key_t, size_t key_offset, typename record_t>
 class UpscaleBTree {
 public:
 
-    UpscaleBTree(const std::string& path, const bool allow_duplicates=false, const size_t cache_size=1<<24, const bool autocommit=false) :
+    UpscaleBTree(const std::string& path, const bool allow_duplicates=true, const size_t cache_size=1<<24, const bool autocommit=false) :
         _path(path),
         _allow_duplicates(allow_duplicates),
         _cache_size(cache_size),
@@ -497,17 +497,6 @@ protected:
     ups_env_t* _ups_env;
     ups_db_t* _ups_db;
 };
-
-
-#ifndef typeof
-#define typeof(THING) __typeof(THING)
-#endif // typeof
-
-#define UPSCALE_BTREE(CLASS, PROPERTY) UpscaleBTree< \
-    typeof( ((CLASS*) NULL)->PROPERTY ), \
-    (char*) &(((CLASS*) NULL)->PROPERTY) - (char*) NULL, \
-    typeof(CLASS) \
->
 
 
 #endif // CTRADING__DB__UPSCALEBTREE__HPP

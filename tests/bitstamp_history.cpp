@@ -2,7 +2,7 @@
 
 
 int main(int argc, char const *argv[]) {
-    BitstampHistory history("db/test-BitstampHistory", "btceur");
+    BitstampHistory history("/tmp/cpptrading-tests/BitstampHistory", "btceur");
     getchar();
     return 0;
 }
