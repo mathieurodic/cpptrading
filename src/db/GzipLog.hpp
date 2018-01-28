@@ -3,7 +3,9 @@
 
 
 #include <string>
+
 #include <zlib.h>
+#include <string.h>
 
 #include "../exceptions/Exception.hpp"
 
