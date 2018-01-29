@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include <string>
 #include <exception>
 
@@ -28,7 +29,20 @@ protected:
 };
 
 
-#define UPS_SAFE_CALL(METHOD, ...) { const ups_status_t STATUS = METHOD(__VA_ARGS__); if (STATUS) {throw UpscaleDBException(#METHOD, STATUS, __VA_ARGS__);} }
+#define UPS_SAFE_CALL(METHOD, ...) { \
+    ups_status_t STATUS = UPS_SUCCESS; \
+    while (true) { \
+        STATUS = METHOD(__VA_ARGS__); \
+        if (STATUS == UPS_TXN_CONFLICT) { \
+            usleep(1); \
+        } else { \
+            break; \
+        } \
+    } \
+    if (STATUS != UPS_SUCCESS) { \
+        throw UpscaleDBException(#METHOD, STATUS, __VA_ARGS__); \
+    } \
+}
 
 
 template <typename key_t, typename record_t>
@@ -39,8 +53,9 @@ public:
         memcpy(this, &source, sizeof(*this));
     }
     inline UpscaleBTreeCursor() : _is_finished(true) {}
-    inline UpscaleBTreeCursor(ups_db_t* ups_db, bool is_fullrange, key_t key_begin, key_t key_end) :
+    inline UpscaleBTreeCursor(ups_db_t* ups_db, ups_txn_t* ups_txn, bool is_fullrange, key_t key_begin, key_t key_end) :
         _ups_db(ups_db),
+        _ups_txn(ups_txn),
         _ups_cursor(NULL),
         _is_fullrange(is_fullrange),
         _is_reverse(is_fullrange ? false : (key_end < key_begin)),
@@ -56,6 +71,7 @@ public:
         if (_ups_cursor) {
             UPS_SAFE_CALL(ups_cursor_close,
                 _ups_cursor);
+            _ups_cursor = NULL;
         }
     }
 
@@ -159,6 +175,7 @@ private:
     //
     key_t _key_begin, _key_end;
     ups_db_t* _ups_db;
+    ups_txn_t* _ups_txn;
     ups_cursor_t* _ups_cursor;
 };
 
@@ -166,12 +183,13 @@ private:
 template <typename key_t, typename record_t>
 class UpscaleBTreeRange {
 public:
-    UpscaleBTreeRange(ups_db_t* ups_db) :
+    UpscaleBTreeRange(ups_db_t* ups_db, ups_txn_t* ups_txn) :
         _ups_db(ups_db),
+        _ups_txn(ups_txn),
         _is_fullrange(true)
     {}
-    UpscaleBTreeRange(ups_db_t* ups_db, key_t key_begin, key_t key_end) :
-        UpscaleBTreeRange(ups_db)
+    UpscaleBTreeRange(ups_db_t* ups_db, ups_txn_t* ups_txn, key_t key_begin, key_t key_end) :
+        UpscaleBTreeRange(ups_db, ups_txn)
     {
         memcpy(&_key_begin, &key_begin, sizeof(key_t));
         memcpy(&_key_end, &key_end, sizeof(key_t));
@@ -179,7 +197,7 @@ public:
     }
 
     UpscaleBTreeCursor<key_t, record_t> begin() {
-        return UpscaleBTreeCursor<key_t, record_t>(_ups_db, _is_fullrange, _key_begin, _key_end);
+        return UpscaleBTreeCursor<key_t, record_t>(_ups_db, _ups_txn, _is_fullrange, _key_begin, _key_end);
     }
 
     const UpscaleBTreeCursor<key_t, record_t>& end() {
@@ -191,6 +209,7 @@ private:
     bool _is_fullrange;
     key_t _key_begin, _key_end;
     ups_db_t* _ups_db;
+    ups_txn_t* _ups_txn;
     //
     static const UpscaleBTreeCursor<key_t, record_t> _cursor_end;
 };
@@ -246,11 +265,24 @@ public:
             (_allow_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
             ups_db_parameters
         );
+        // create transaction
+        UPS_SAFE_CALL(ups_txn_begin,
+            &_ups_read_txn,
+            _ups_env,
+            "READER",
+            NULL,
+            0
+        )
     }
 
     inline ~UpscaleBTree() {
+        ups_txn_abort(
+            _ups_read_txn,
+            0
+        );
         UPS_SAFE_CALL(ups_env_close,
             _ups_env, UPS_AUTO_CLEANUP);
+        _ups_env = NULL;
     }
 
     inline const std::string& get_path() const {
@@ -313,7 +345,7 @@ public:
         try {
             UPS_SAFE_CALL(ups_db_find,
                 _ups_db,
-                NULL, // transaction
+                _ups_read_txn,
                 &ups_key,
                 &ups_record,
                 flags
@@ -329,10 +361,10 @@ public:
     }
 
     inline UpscaleBTreeRange<key_t, record_t> get_all() {
-        return UpscaleBTreeRange<key_t, record_t>(_ups_db);
+        return UpscaleBTreeRange<key_t, record_t>(_ups_db, _ups_read_txn);
     }
     inline UpscaleBTreeRange<key_t, record_t> get_range(key_t key_begin, key_t key_end) {
-        return UpscaleBTreeRange<key_t, record_t>(_ups_db, key_begin, key_end);
+        return UpscaleBTreeRange<key_t, record_t>(_ups_db, _ups_read_txn, key_begin, key_end);
     }
 
     inline const bool contains(record_t& searched_record) {
@@ -362,7 +394,7 @@ public:
         UPS_SAFE_CALL(ups_cursor_create,
             &ups_cursor,
             _ups_db,
-            0, // transaction
+            _ups_read_txn,
             0 // flags (unused)
         );
         try {
@@ -373,20 +405,25 @@ public:
                 UPS_FIND_GEQ_MATCH
             );
         } catch (const UpscaleDBException& exception) {
+            UPS_SAFE_CALL(ups_cursor_close,
+                ups_cursor
+            );
             if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
                 return 0;
+            } else {
+                throw exception;
             }
         }
         // test until record is found... or not
         size_t count = 0;
         do {
             if (key > searched_key) {
-                return count;
+                break;
             }
             if (record == searched_record) {
                 ++count;
                 if (stop_at_first) {
-                    return count;
+                    break;
                 }
             }
             try {
@@ -398,11 +435,18 @@ public:
                 );
             } catch (const UpscaleDBException& exception) {
                 if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER) {
-                    return count;
+                    break;
                 }
+                UPS_SAFE_CALL(ups_cursor_close,
+                    ups_cursor
+                );
                 throw exception;
             }
         } while (true);
+        UPS_SAFE_CALL(ups_cursor_close,
+            ups_cursor
+        );
+        return count;
     }
     inline const bool contains(key_t& searched_key) {
         return count(searched_key, true);
@@ -428,7 +472,7 @@ public:
         UPS_SAFE_CALL(ups_cursor_create,
             &ups_cursor,
             _ups_db,
-            0, // transaction
+            _ups_read_txn,
             0 // flags (unused)
         );
         try {
@@ -439,20 +483,25 @@ public:
                 UPS_FIND_GEQ_MATCH
             );
         } catch (const UpscaleDBException& exception) {
+            UPS_SAFE_CALL(ups_cursor_close,
+                ups_cursor
+            );
             if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
                 return 0;
+            } else {
+                throw exception;
             }
         }
         // test until record is found... or not
         size_t count = 0;
         do {
             if (key > searched_key) {
-                return count;
+                break;
             }
             if (key == searched_key) {
                 ++count;
                 if (stop_at_first) {
-                    return count;
+                    break;
                 }
             }
             try {
@@ -464,11 +513,18 @@ public:
                 );
             } catch (const UpscaleDBException& exception) {
                 if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER) {
-                    return count;
+                    break;
                 }
+                UPS_SAFE_CALL(ups_cursor_close,
+                    ups_cursor
+                );
                 throw exception;
             }
         } while (true);
+        UPS_SAFE_CALL(ups_cursor_close,
+            ups_cursor
+        );
+        return count;
     }
 
 protected:
@@ -496,7 +552,19 @@ protected:
     // internals
     ups_env_t* _ups_env;
     ups_db_t* _ups_db;
+    ups_txn_t* _ups_read_txn;
 };
+
+
+#ifndef typeof
+#define typeof(THING) __typeof(THING)
+#endif // typeof
+
+#define UPSCALE_BTREE(CLASS, PROPERTY) UpscaleBTree< \
+    typeof( ((CLASS*) NULL)->PROPERTY ), \
+    (char*) &(((CLASS*) NULL)->PROPERTY) - (char*) NULL, \
+    typeof(CLASS) \
+>
 
 
 #endif // CTRADING__DB__UPSCALEBTREE__HPP
