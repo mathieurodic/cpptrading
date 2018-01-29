@@ -246,11 +246,24 @@ public:
             (_allow_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
             ups_db_parameters
         );
+        // create transaction
+        UPS_SAFE_CALL(ups_txn_begin,
+            &_ups_read_txn,
+            _ups_env,
+            "READER",
+            NULL,
+            0
+        )
     }
 
     inline ~UpscaleBTree() {
+        ups_txn_abort(
+            _ups_read_txn,
+            0
+        );
         UPS_SAFE_CALL(ups_env_close,
             _ups_env, UPS_AUTO_CLEANUP);
+        _ups_env = NULL;
     }
 
     inline const std::string& get_path() const {
@@ -496,7 +509,19 @@ protected:
     // internals
     ups_env_t* _ups_env;
     ups_db_t* _ups_db;
+    ups_txn_t* _ups_read_txn;
 };
+
+
+#ifndef typeof
+#define typeof(THING) __typeof(THING)
+#endif // typeof
+
+#define UPSCALE_BTREE(CLASS, PROPERTY) UpscaleBTree< \
+    typeof( ((CLASS*) NULL)->PROPERTY ), \
+    (char*) &(((CLASS*) NULL)->PROPERTY) - (char*) NULL, \
+    typeof(CLASS) \
+>
 
 
 #endif // CTRADING__DB__UPSCALEBTREE__HPP
