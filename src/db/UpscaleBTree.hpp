@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include <string>
 #include <exception>
 
@@ -28,7 +29,20 @@ protected:
 };
 
 
-#define UPS_SAFE_CALL(METHOD, ...) { const ups_status_t STATUS = METHOD(__VA_ARGS__); if (STATUS) {throw UpscaleDBException(#METHOD, STATUS, __VA_ARGS__);} }
+#define UPS_SAFE_CALL(METHOD, ...) { \
+    ups_status_t STATUS = UPS_SUCCESS; \
+    while (true) { \
+        STATUS = METHOD(__VA_ARGS__); \
+        if (STATUS == UPS_TXN_CONFLICT) { \
+            usleep(1); \
+        } else { \
+            break; \
+        } \
+    } \
+    if (STATUS != UPS_SUCCESS) { \
+        throw UpscaleDBException(#METHOD, STATUS, __VA_ARGS__); \
+    } \
+}
 
 
 template <typename key_t, typename record_t>
