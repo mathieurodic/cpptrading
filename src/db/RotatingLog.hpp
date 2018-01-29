@@ -56,6 +56,9 @@ public:
         if (fwrite(&item, sizeof(item), 1, _file) != 1) {
             throw FileException("RotatingLogWriter could not write to file", _path, strerror(errno));
         }
+        if (fflush(_file) != 0) {
+            throw FileException("RotatingLogWriter could not flush to file", _path, strerror(errno));
+        }
         _bytes_written += sizeof(item);
         if (_bytes_written > _check_threshold)  {
             const int64_t current_timestamp = time(NULL);
@@ -134,7 +137,7 @@ public:
                 case 1:
                     return true;
                 case 0:
-                    _file = NULL;
+                    close_file();
                     if (!rotate_file()) {
                         return false;
                     }
