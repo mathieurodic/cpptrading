@@ -27,10 +27,19 @@ public:
 };
 
 
+class TCPConnection;
+
+class TCPHandler {
+public:
+    virtual bool callback(TCPConnection& connection) = 0;
+};
+
+
 class TCPConnection {
 public:
 
-    inline TCPConnection(const int sock, const int timeout) :
+    inline TCPConnection(TCPHandler& handler, const int sock, const int timeout) :
+        _handler(handler),
         _sock(sock),
         _is_running(true),
         _thread(loop, this),
@@ -97,24 +106,11 @@ public:
         }
     }
 
-    virtual void handle_request() {
-        char data[4];
-        std::cout << "READ" << '\n';
-        read(data, 4);
-        std::cout << "WRITE" << '\n';
-        write("\n:)\n'");
-        write(data, 4);
-        write("'");
-        std::cout << "SLEEP" << '\n';
-        sleep(1);
-    }
-
     static void loop(TCPConnection* replier) {
         ssize_t r;
         std::string recieved_data;
         try {
-            while (replier->_is_running) {
-                replier->handle_request();
+            while (replier->_is_running && replier->_handler.callback(*replier)) {
                 replier->ensure_is_not_closed();
             }
         } catch (TCPConnectionClosedException) {
@@ -125,6 +121,7 @@ public:
     }
 
 private:
+    TCPHandler& _handler;
     const int _sock;
     bool _is_running;
     time_t _endtime;
@@ -135,14 +132,15 @@ private:
 class TCPServer {
 public:
 
-    inline TCPServer(const std::string& servspec, const int timeout=10) :
+    inline TCPServer(TCPHandler& handler, const std::string& servspec, const int timeout=10) :
+        _handler(handler),
         _is_running(true),
         _timeout(timeout),
         _thread(_start, this),
         _servspec(servspec)
     {}
-    inline TCPServer(const uint64_t port, const int timeout=10) :
-        TCPServer(":" + std::to_string(port), timeout) {}
+    inline TCPServer(TCPHandler& handler, const uint64_t port, const int timeout=10) :
+        TCPServer(handler, ":" + std::to_string(port), timeout) {}
 
     inline ~TCPServer() {
         std::cout << "CLOSE SERVER #1" << '\n';
@@ -171,7 +169,7 @@ public:
             FD_SET(sock, &rfds);
             if (select(sock + 1, &rfds, 0, 0, &tv)) {
                 int new_sock = accept(sock, 0, 0);
-                _connections.push_back(new TCPConnection(new_sock, _timeout));
+                _connections.push_back(new TCPConnection(_handler, new_sock, _timeout));
             }
             usleep(1);
         }
@@ -208,6 +206,7 @@ public:
     }
 
 private:
+    TCPHandler& _handler;
     std::thread _thread;
     std::string _servspec;
     bool _is_running;
