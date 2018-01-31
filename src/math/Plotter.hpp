@@ -24,29 +24,33 @@ enum PlotterColor {
 
 
 struct PlotterCurve {
-    PlotterCurve(double(*f)(double), PlotterColor color) :
+    PlotterCurve(double (*f1)(double), PlotterColor color) :
         type(FUNCTION_1),
-        f1(f),
-        f2(NULL),
+        f1(f1),
         color(color) {}
-    PlotterCurve(double(*f)(double, double), PlotterColor color) :
+    PlotterCurve(double (*f2)(double, double), PlotterColor color) :
         type(FUNCTION_2),
-        f1(NULL),
-        f2(f),
+        f2(f2),
+        color(color) {}
+    PlotterCurve(std::pair<double, double> (*f3)(double, double), PlotterColor color) :
+        type(FUNCTION_3),
+        f3(f3),
         color(color) {}
     PlotterCurve(std::vector<std::pair<double, double>> values, PlotterColor color) :
         type(VALUES),
-        f1(NULL),
-        f2(NULL),
         values(values),
         color(color) {}
     enum {
         FUNCTION_1,
         FUNCTION_2,
+        FUNCTION_3,
         VALUES,
     } type;
-    double (*f1)(double);
-    double (*f2)(double, double);
+    union {
+        double (*f1)(double);
+        double (*f2)(double, double);
+        std::pair<double, double> (*f3)(double, double);
+    };
     std::vector<std::pair<double, double>> values;
     PlotterColor color;
 };
@@ -172,28 +176,42 @@ public:
         }
     }
 
+    inline void plot(double x, double y, PlotterColor color=WHITE) {
+        if (isnan(y)) {
+            return;
+        }
+        const int16_t i = x_to_i(x);
+        const int16_t j = y_to_j(y);
+        if (!check_ij(i, j)) {
+            return;
+        }
+        _plot[j][i] = color;
+    }
+    inline void plot(double x, std::pair<double, double> y_range, PlotterColor color=WHITE) {
+        for (double y=y_range.first; y<=y_range.second; y+=_axes.y.step) {
+            plot(x, y, color);
+        }
+        plot(x, y_range.second, color);
+    }
+
     inline void plot(double (*f)(double), PlotterColor color) {
-        double x = _axes.x.min - .5 * _axes.x.step;
         for (double x=_axes.x.min; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
-            int16_t i = x_to_i(x);
-            double y = f(x);
-            if (!isnan(y)) {
-                int16_t j = y_to_j(y);
-                if (!check_ij(i, j)) {
-                    continue;
-                }
-                _plot[j][i] = color;
-            }
+            plot(x, f(x), color);
+        }
+    }
+    inline void plot(double (*f)(double, double), PlotterColor color) {
+        for (double x=_axes.x.min-.5*_axes.x.step; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
+            plot(x, f(x, x + _axes.x.step), color);
+        }
+    }
+    inline void plot(std::pair<double, double> (*f)(double, double), PlotterColor color) {
+        for (double x=_axes.x.min-.5*_axes.x.step; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
+            plot(x, f(x, x + _axes.x.step), color);
         }
     }
     inline void plot(const std::vector<std::pair<double, double>> values, PlotterColor color) {
         for (const auto& value : values) {
-            int16_t i = x_to_i(value.first);
-            int16_t j = y_to_j(value.second);
-            if (!check_ij(i, j)) {
-                continue;
-            }
-            _plot[j][i] = color;
+            plot(value.first, value.second, color);
         }
     }
     inline void plot(const PlotterCurve& curve) {
@@ -202,6 +220,10 @@ public:
                 plot(curve.f1, curve.color);
                 break;
             case PlotterCurve::FUNCTION_2:
+                plot(curve.f2, curve.color);
+                break;
+            case PlotterCurve::FUNCTION_3:
+                plot(curve.f3, curve.color);
                 break;
             case PlotterCurve::VALUES:
                 plot(curve.values, curve.color);
@@ -256,10 +278,14 @@ public:
         _curves.clear();
     }
 
-
-    template <typename argument_t>
-    inline void plot(argument_t argument, PlotterColor color=WHITE) {
-        _curves.push_back(PlotterCurve(argument, color));
+    inline void plot(double (*f)(double), PlotterColor color=WHITE) {
+        _curves.push_back(PlotterCurve(f, color));
+    }
+    inline void plot(double (*f)(double, double), PlotterColor color=WHITE) {
+        _curves.push_back(PlotterCurve(f, color));
+    }
+    inline void plot(std::pair<double, double> (*f)(double, double), PlotterColor color=WHITE) {
+        _curves.push_back(PlotterCurve(f, color));
     }
     inline void plot(std::vector<std::pair<double, double>> values, PlotterColor color=WHITE) {
         _curves.push_back(PlotterCurve(values, color));
