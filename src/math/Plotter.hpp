@@ -10,8 +10,6 @@
 #include <math.h>
 
 #include <vector>
-#include <map>
-#include <string>
 
 
 enum PlotterColor {
@@ -26,7 +24,30 @@ enum PlotterColor {
 
 
 struct PlotterCurve {
-    double (*f)(double);
+    PlotterCurve(double(*f)(double), PlotterColor color) :
+        type(FUNCTION_1),
+        f1(f),
+        f2(NULL),
+        color(color) {}
+    PlotterCurve(double(*f)(double, double), PlotterColor color) :
+        type(FUNCTION_2),
+        f1(NULL),
+        f2(f),
+        color(color) {}
+    PlotterCurve(std::vector<std::pair<double, double>> values, PlotterColor color) :
+        type(VALUES),
+        f1(NULL),
+        f2(NULL),
+        values(values),
+        color(color) {}
+    enum {
+        FUNCTION_1,
+        FUNCTION_2,
+        VALUES,
+    } type;
+    double (*f1)(double);
+    double (*f2)(double, double);
+    std::vector<std::pair<double, double>> values;
     PlotterColor color;
 };
 
@@ -92,6 +113,15 @@ public:
     inline const int16_t y_to_j(const double y) const {
         return round((_axes.y.max - y + .5 * _axes.x.step) / _axes.y.step);
     }
+    inline const bool check_ij(const int16_t i, const int16_t j) const {
+        if (i < 0 || i >= _plot_width) {
+            return false;
+        }
+        if (j < 0 || j >= _plot_height) {
+            return false;
+        }
+        return true;
+    }
 
     inline void plot_grid_vertical() {
         double x_min = _axes.x.origin;
@@ -146,17 +176,36 @@ public:
         double x = _axes.x.min - .5 * _axes.x.step;
         for (double x=_axes.x.min; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
             int16_t i = x_to_i(x);
-            if (i < 0 || i >= _plot_width) {
-                continue;
-            }
             double y = f(x);
             if (!isnan(y)) {
                 int16_t j = y_to_j(y);
-                if (j < 0 || j >= _plot_height) {
+                if (!check_ij(i, j)) {
                     continue;
                 }
                 _plot[j][i] = color;
             }
+        }
+    }
+    inline void plot(const std::vector<std::pair<double, double>> values, PlotterColor color) {
+        for (const auto& value : values) {
+            int16_t i = x_to_i(value.first);
+            int16_t j = y_to_j(value.second);
+            if (!check_ij(i, j)) {
+                continue;
+            }
+            _plot[j][i] = color;
+        }
+    }
+    inline void plot(const PlotterCurve& curve) {
+        switch (curve.type) {
+            case PlotterCurve::FUNCTION_1:
+                plot(curve.f1, curve.color);
+                break;
+            case PlotterCurve::FUNCTION_2:
+                break;
+            case PlotterCurve::VALUES:
+                plot(curve.values, curve.color);
+                break;
         }
     }
 
@@ -206,12 +255,16 @@ public:
     inline void clear() {
         _curves.clear();
     }
-    inline void plot(double(*f)(double), PlotterColor color=WHITE) {
-        _curves.push_back({
-            .f = f,
-            .color = color,
-        });
+
+
+    template <typename argument_t>
+    inline void plot(argument_t argument, PlotterColor color=WHITE) {
+        _curves.push_back(PlotterCurve(argument, color));
     }
+    inline void plot(std::vector<std::pair<double, double>> values, PlotterColor color=WHITE) {
+        _curves.push_back(PlotterCurve(values, color));
+    }
+
     inline void show() {
         // get window size
         struct winsize window_size;
@@ -219,7 +272,7 @@ public:
         // initialize buffer
         PlotterBuffer buffer(window_size.ws_col, window_size.ws_row - 1, axes);
         for (const PlotterCurve& curve : _curves) {
-            buffer.plot(curve.f, curve.color);
+            buffer.plot(curve);
         }
         // go!
         buffer.show();

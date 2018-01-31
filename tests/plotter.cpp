@@ -19,10 +19,10 @@ int main (int argc, char **argv)
         return x * x - 2.;
     }, YELLOW);
     plotter.plot(sqrt, BLUE);
-    plotter.plot(cos, GREEN);
     plotter.plot(exp, CYAN);
     plotter.plot(log, MAGENTA);
     plotter.plot(sin, RED);
+    plotter.plot({{0, 0}, {1, 1}, {2, 2}, {-1, -1}, {.5, .5}, {1.5, 1.5}, {-42, 111}}, GREEN);
     plotter.show();
     return 0;
 }
