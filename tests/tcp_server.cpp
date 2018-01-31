@@ -27,7 +27,7 @@ private:
 
 int main(int argc, char const *argv[]) {
     TCPSpecialHandler handler(7);
-    TCPServer server(handler, 56789, 10);
+    TCPServer server(handler, "0.0.0.0", 56789);
     getchar();
     return 0;
 }

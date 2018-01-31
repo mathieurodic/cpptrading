@@ -38,11 +38,12 @@ public:
 class TCPConnection {
 public:
 
-    inline TCPConnection(TCPHandler& handler, const int sock, const int timeout) :
+    inline TCPConnection(TCPHandler& handler, const int sock, const time_t timeout=3) :
         _handler(handler),
         _sock(sock),
         _is_running(true),
         _thread(loop, this),
+        _timeout(timeout),
         _endtime(timeout + time(NULL))
     {
         std::cout << "START CONNECTION " << _sock << '\n';
@@ -77,11 +78,16 @@ public:
         }
     }
 
+    inline void start_timeout() {
+        _endtime = _timeout + time(NULL);
+    }
+
     inline void write(const std::string& str) {
         write(str.data(), str.size());
     }
     inline void write(const void* data, const int size) {
         int offset = 0;
+        start_timeout();
         while (offset < size) {
             const int result = send(_sock, (const char*)data + offset, size, 0);
             if (result == -1) {
@@ -95,6 +101,7 @@ public:
 
     inline void read(void* data, const int size) {
         int offset = 0;
+        start_timeout();
         while (offset < size) {
             const int result = recv(_sock, (char*)data + offset, size, 0);
             if (result == -1) {
@@ -125,6 +132,7 @@ private:
     TCPHandler& _handler;
     const int _sock;
     bool _is_running;
+    int _timeout;
     time_t _endtime;
     std::thread _thread;
 };
@@ -133,15 +141,14 @@ private:
 class TCPServer {
 public:
 
-    inline TCPServer(TCPHandler& handler, const std::string& servspec, const int timeout=10) :
+    inline TCPServer(TCPHandler& handler, const std::string& host, const int port, const int timeout=10) :
         _handler(handler),
         _is_running(true),
+        _host(host),
+        _port(port),
         _timeout(timeout),
-        _thread(_start, this),
-        _servspec(servspec)
+        _thread(_start, this)
     {}
-    inline TCPServer(TCPHandler& handler, const uint64_t port, const int timeout=10) :
-        TCPServer(handler, ":" + std::to_string(port), timeout) {}
 
     inline ~TCPServer() {
         std::cout << "CLOSE SERVER #1" << '\n';
@@ -160,7 +167,7 @@ public:
     }
     void start() {
         signal(SIGPIPE, SIG_IGN);
-        int sock = make_accept_sock(_servspec.c_str());
+        int sock = make_accept_sock();
         while (_is_running) {
             struct timeval tv;
             tv.tv_sec = (long)_timeout;
@@ -176,21 +183,17 @@ public:
         }
     }
 
-    int make_accept_sock(const char *servspec) {
+    int make_accept_sock() {
         const int one = 1;
         struct addrinfo hints = {};
         struct addrinfo *res = 0, *ai = 0, *ai4 = 0;
-        char *node = strdup(servspec);
-        char *service = strrchr(node, ':');
         int sock;
 
         hints.ai_family = PF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_flags = AI_PASSIVE;
 
-        *service++ = '\0';
-        getaddrinfo(*node ? node : "0::0", service, &hints, &res);
-        free(node);
+        getaddrinfo(_host.c_str(), std::to_string(_port).c_str(), &hints, &res);
 
         for (ai = res; ai; ai = ai->ai_next) {
             if (ai->ai_family == PF_INET6) break;
@@ -208,8 +211,9 @@ public:
 
 private:
     TCPHandler& _handler;
+    const std::string _host;
+    const int _port;
     std::thread _thread;
-    std::string _servspec;
     bool _is_running;
     int _timeout;
     std::list<TCPConnection*> _connections;
