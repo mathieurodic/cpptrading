@@ -98,6 +98,10 @@ public:
             ensure_is_not_closed();
         }
     }
+    template <typename T>
+    inline void write(const T& object) {
+        return write((void*) &object, sizeof(object));
+    }
 
     inline void read(void* data, const int size) {
         int offset = 0;
@@ -111,6 +115,10 @@ public:
             offset += result;
             ensure_is_not_closed();
         }
+    }
+    template <typename T>
+    inline void read(const T& object) {
+        return read((void*) &object, sizeof(object));
     }
 
     static void loop(TCPConnection* replier) {

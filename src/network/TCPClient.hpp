@@ -108,6 +108,7 @@ public:
     inline int read(void* data, const size_t size) {
         int offset = 0;
         while (offset < size) {
+            const int missing = size - offset;
             const int result = recv(_sock, (char*)data + offset, size, 0);
             if (result == -1) {
                 throw TCPClientError("TCPConnection could not read", _sock, strerror(errno));
@@ -128,6 +129,11 @@ public:
             str.append(_buffer, offset);
         } while (offset == sizeof(_buffer));
     }
+    template <typename T>
+    inline int read(T& object) {
+        int result = read(&object, sizeof(object));
+        return result;
+    }
 
     inline void write(const std::string& str) {
         write(str.data(), str.size());
@@ -138,7 +144,10 @@ public:
             throw TCPClientError("TCPClient could not write data", strerror(errno), size, _host, _port);
 		}
     }
-
+    template <typename T>
+    inline void write(T& object) {
+        return write(&object, sizeof(object));
+    }
 
 private:
     const std::string _host;
@@ -148,6 +157,7 @@ private:
     int _sock;
     struct sockaddr_in _address;
     char _buffer[4096];
+    std::string _read_buffer;
 };
 
 
