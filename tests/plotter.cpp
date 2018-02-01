@@ -4,9 +4,10 @@
 class MyPlotter : public Plotter {
     virtual void on_key_press(const int key) {
         switch (key) {
-            // case 27:
-            //     is_looping = false;
-            //     break;
+            case 81:
+            case 113:
+                _is_looping = false;
+                break;
             case 65:
                 axes.y.min += .5;
                 axes.y.max = NAN;

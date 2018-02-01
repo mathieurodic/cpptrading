@@ -367,8 +367,9 @@ public:
 
     PlotterAxesParameters axes;
 
-private:
+protected:
     bool _is_looping;
+private:
     std::vector<PlotterCurve> _curves;
     struct winsize _last_window_size;
 };
