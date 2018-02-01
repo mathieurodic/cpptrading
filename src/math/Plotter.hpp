@@ -9,7 +9,13 @@
 #include <stdint.h>
 #include <math.h>
 
+// #include <ncurses.h>
+#include <ncursesw/ncurses.h>
+#include <locale.h>
+#include <wchar.h>
+
 #include <vector>
+#include <string>
 
 
 enum PlotterColor {
@@ -80,8 +86,8 @@ class PlotterBuffer {
 public:
 
     PlotterBuffer(int16_t plot_width, int16_t plot_height, PlotterAxesParameters& axes) :
-        _plot_width(plot_width),
-        _plot_height(2 * plot_height),
+        _plot_width(plot_width + 1),
+        _plot_height(2 * plot_height + 2),
         _axes(axes)
     {
         // allocate pixels buffer
@@ -96,7 +102,6 @@ public:
         // draw grids
         plot_grid_vertical();
         plot_grid_horizontal();
-        // draw Y grid
     }
 
     inline void adjust_axis(PlotterAxisParameters& axis, const int16_t size) {
@@ -112,10 +117,10 @@ public:
     }
 
     inline const int16_t x_to_i(const double x) const {
-        return round((x - _axes.x.min) / _axes.x.step);
+        return round((x - _axes.x.min + .5 * _axes.x.step) / _axes.x.step);
     }
     inline const int16_t y_to_j(const double y) const {
-        return round((_axes.y.max - y + .5 * _axes.x.step) / _axes.y.step);
+        return round((_axes.y.max - y - .5 * _axes.x.step) / _axes.y.step);
     }
     inline const bool check_ij(const int16_t i, const int16_t j) const {
         if (i < 0 || i >= _plot_width) {
@@ -214,6 +219,7 @@ public:
             plot(value.first, value.second, color);
         }
     }
+
     inline void plot(const PlotterCurve& curve) {
         switch (curve.type) {
             case PlotterCurve::FUNCTION_1:
@@ -231,39 +237,57 @@ public:
         }
     }
 
-    inline void show(uint8_t pixel_top, uint8_t pixel_bottom) {
-        if (pixel_top < 8 || pixel_bottom < 8) {
-            printf("\e[3%hhu;4%hhum▀", pixel_top & 7, pixel_bottom & 7);
+    inline wchar_t* get_character(uint8_t pixel_top, uint8_t pixel_bottom) {
+        if (!(pixel_top | pixel_bottom)) {
+            return L" ";
+        } else if (pixel_top < 8 || pixel_bottom < 8) {
+            // printf("\e[3%hhu;4%hhum▀", pixel_top & 7, pixel_bottom & 7);
+            return L"▀";
         } else {
-            printf("\e[%dm", ((pixel_top | pixel_bottom) & 32) ? 1 : 2);
             switch (pixel_top & 24) {
                 case 8:
-                    printf("│");
-                    break;
+                    return L"│";
                 case 16:
-                    printf("─");
-                    break;
+                    return L"─";
                 case 24:
-                    printf("┼");
-                    break;
+                    return L"┼";
                 default:
-                    printf(" ");
+                    return L" ";
             }
         }
-        printf("\e[0;40;37m");
     }
-
     inline void show() {
         for (int16_t j=0; j<_plot_height; j+=2) {
             for (int16_t i=0; i<_plot_width; ++i) {
-                show(_plot[j][i], _plot[j+1][i]);
+                const uint8_t pixel_top = _plot[j][i];
+                const uint8_t pixel_bottom = _plot[j + 1][i];
+                wchar_t* character = get_character(pixel_top, pixel_bottom);
+                if (pixel_top < 8 || pixel_bottom < 8) {
+                    attron(A_INVIS);
+                    // attrset(COLOR_PAIR(2));
+                    attrset(COLOR_PAIR((pixel_top & 7) | ((pixel_bottom & 7) << 3)));
+                    // attron(COLOR_PAIR((pixel_top & 7) | ((pixel_bottom & 7) << 3)));
+                } else if (pixel_top | pixel_bottom) {
+                    attrset(COLOR_PAIR(64));
+                    if ((pixel_bottom | pixel_top) & 32) {
+                        attron(A_BOLD);
+                    } else {
+                        attron(A_DIM);
+                    }
+                } else {
+                    attrset(COLOR_PAIR(1));
+                }
+                mvaddwstr(j/2, i, character);
+                // attron(COLOR_PAIR(0));
+                attroff(A_BOLD);
+                attroff(A_DIM);
             }
-            printf("\e[0m\n");
         }
+        refresh();
     }
 
 private:
-    PlotterAxesParameters _axes;
+    PlotterAxesParameters& _axes;
     int16_t _plot_width, _plot_height;
     uint8_t** _plot;
     uint8_t* _plot_pixels;
@@ -272,7 +296,26 @@ private:
 
 class Plotter {
 public:
-    inline Plotter() {}
+    inline Plotter() : _last_window_size({0}), _is_looping(false) {
+    	setlocale(LC_ALL, "");
+        initscr();
+        start_color();
+    	clear();
+    	noecho();
+    	cbreak();
+        // initialize colors
+        for (int pixel_bottom=0; pixel_bottom<8; ++pixel_bottom) {
+            for (int pixel_top=0; pixel_top<8; ++pixel_top) {
+                init_pair(pixel_top | (pixel_bottom << 3), pixel_top, pixel_bottom);
+            }
+        }
+        init_pair(64, 7, 0);
+    }
+    inline ~Plotter() {
+        clrtoeol();
+    	refresh();
+    	endwin();
+    }
 
     inline void clear() {
         _curves.clear();
@@ -297,6 +340,11 @@ public:
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &window_size);
         // initialize buffer
         PlotterBuffer buffer(window_size.ws_col, window_size.ws_row - 1, axes);
+        if (_last_window_size.ws_col != window_size.ws_col || _last_window_size.ws_row != window_size.ws_row) {
+            // buffer.clear();
+        }
+        _last_window_size = window_size;
+        // draw stuff
         for (const PlotterCurve& curve : _curves) {
             buffer.plot(curve);
         }
@@ -304,10 +352,25 @@ public:
         buffer.show();
     }
 
+    virtual void on_key_press(const int key) {}
+    inline void start() {
+        _is_looping = true;
+        show();
+        while (_is_looping) {
+            const int c = getch();
+            on_key_press(c);
+        }
+    }
+    inline void stop() {
+        _is_looping = false;
+    }
+
     PlotterAxesParameters axes;
 
 private:
+    bool _is_looping;
     std::vector<PlotterCurve> _curves;
+    struct winsize _last_window_size;
 };
 
 
