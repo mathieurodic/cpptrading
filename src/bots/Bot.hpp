@@ -3,7 +3,7 @@
 
 
 #include "history/History.hpp"
-#include "models/Advice.hpp"
+#include "models/Decision.hpp"
 
 
 class Bot {
@@ -12,8 +12,8 @@ public:
     inline Bot() {}
     inline ~Bot() {}
 
-    virtual const Advice get_advice(const double& timestamp, History& history) {
-        return Advice();
+    virtual Decision decide(History& history, const double& timestamp) {
+        return Decision();
     }
 
 };

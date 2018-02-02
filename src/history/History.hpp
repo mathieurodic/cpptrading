@@ -143,7 +143,7 @@ public:
 
     INDEXED_STORAGE_2(Trade, id, timestamp, RotatingLog, UpscaleBTree) trades;
     INDEXED_STORAGE(Order, id, RotatingLog, UpscaleBTree) orders;
-    INDEXED_STORAGE(Decision, timestamp, RotatingLog, UpscaleBTree) decisions;
+    INDEXED_STORAGE(Decision, decision_timestamp, RotatingLog, UpscaleBTree) decisions;
     INDEXED_STORAGE(TradeAverage, timestamp_range, RotatingLog, UpscaleBTree) averages;
     typedef tbb::concurrent_hash_map<uint64_t, std::vector<Order>> current_orders_t;
     current_orders_t current_orders;

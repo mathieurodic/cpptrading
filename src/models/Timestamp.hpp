@@ -29,14 +29,18 @@ private:
 
 template <typename base_type>
 inline std::ostream& operator << (std::ostream& os, const Timestamp<base_type>& timestamp) {
-    const time_t t = (base_type) timestamp;
-    struct tm lt;
-    localtime_r(&t, &lt);
-    static const char* format = "%Y-%m-%dT%H:%M:%S";
-    char buffer[32];
-    memset(buffer, 0, sizeof(buffer));
-    strftime(buffer, sizeof(buffer), format, &lt);
-    return (os << buffer);
+    if (std::isnan(timestamp)) {
+        return (os << "????-??-??T??:??:??");
+    } else {
+        const time_t t = (base_type) timestamp;
+        struct tm lt;
+        localtime_r(&t, &lt);
+        static const char* format = "%Y-%m-%dT%H:%M:%S";
+        char buffer[32];
+        memset(buffer, 0, sizeof(buffer));
+        strftime(buffer, sizeof(buffer), format, &lt);
+        return (os << buffer);
+    }
 }
 
 

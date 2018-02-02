@@ -5,7 +5,8 @@ OUTPUT_PATH="${OUTPUT_PATH%.*}"
 OUTPUT_DIR="$(dirname "${OUTPUT_PATH}")"
 
 mkdir -p "${OUTPUT_DIR}"
-time g++ -Wno-narrowing --short-enums -fdiagnostics-color=always -std=c++17 -O2 -Isrc "${INPUT_PATH}" \
+time g++ --short-enums -fdiagnostics-color=always -std=c++17 -O2 -Isrc "${INPUT_PATH}" \
+    -Wno-write-strings  -Wno-narrowing -Wno-trigraphs \
     -lpthread -lupscaledb -lstdc++fs -lz -lwebsockets -lcurl -ltbb -lncursesw \
     -o "${OUTPUT_PATH}" && echo && time ./${OUTPUT_PATH}
 exit $?
