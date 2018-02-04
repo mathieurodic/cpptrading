@@ -8,13 +8,10 @@
 #include <set>
 #include <thread>
 
-#include "./easywsclient.hpp"
-#include "./easywsclient.cpp"
 #include "json.hpp"
-
 using JSON = nlohmann::json;
 
-#include "../exceptions/Exception.hpp"
+#include "./WebSocketClient.hpp"
 
 
 typedef void (*pusher_callback_t) (const std::string&, const JSON&, void*);
@@ -31,32 +28,26 @@ struct PusherChannelSubscription {
 };
 
 
-class PusherConnection {
+class PusherClient : public WebSocketClient {
 public:
 
-    inline PusherConnection(const std::string& key, const std::string& cluster="mt1") :
+    inline PusherClient(const std::string& key, const std::string& cluster="mt1") :
+        WebSocketClient("ws://ws-" + cluster + ".pusher.com/app/" + key + "?client=cpptrading&version=0.01&protocol=7"),
         _key(key),
         _cluster(cluster),
-        _host("ws-" + cluster + ".pusher.com"),
-        _path("/app/" + key + "?client=cpptrading&version=0.01&protocol=7"),
-        _url("ws://" + _host + _path),
-        _ws(NULL),
-        _thread(NULL),
-        _is_running(false)
+        _host("ws-" + _cluster + ".pusher.com"),
+        _path("/app/" + _key + "?client=cpptrading&version=0.01&protocol=7")
     {}
-
-    inline ~PusherConnection() {
-        stop();
-    }
 
     inline void send(const std::string& event, const JSON& data) {
         const std::string payload = JSON({
             {"event", event},
             {"data", data}
         }).dump();
-        _ws->send(payload);
+        WebSocketClient::send(payload);
     }
     inline void subscribe(const std::string& channel_name, std::vector<std::string> events, pusher_callback_t callable, void* user_data=NULL) {
+        // exit(0);
         for (const std::string& event : events) {
             _subscriptions.insert({event, {channel_name, callable, user_data}});
         }
@@ -65,48 +56,19 @@ public:
         _subscriptions.clear();
     }
 
-    static void _start(PusherConnection* pusher_connection) {
-        while (pusher_connection->_is_running) {
-            pusher_connection->_ws->poll(1);
-            pusher_connection->_ws->dispatch(pusher_connection->_callback, pusher_connection);
-        }
-    }
     inline void start() {
-        stop();
-        _is_running = true;
-        // initialize websocket
-        _ws = easywsclient::WebSocket::from_url(_url);
-        if (_ws == NULL) {
-            throw NetworkException("Could not connect to Pusher WebSocket", _key, _cluster);
-        }
         // initialize websocket channels
         std::set<std::string> channel_names;
         for (const auto& it : _subscriptions) {
             channel_names.insert(it.second.channel_name);
         }
+        WebSocketClient::start();
         for (const std::string& channel_name : channel_names) {
             send("pusher:subscribe", {{"channel", channel_name}});
         }
-        // initialize thread
-        _thread = new std::thread(_start, this);
-    }
-    inline void stop() {
-        _is_running = false;
-        // stop thread
-        if (_thread) {
-            _thread->join();
-            delete _thread;
-            _thread = NULL;
-        }
-        // stop websocket
-        if (_ws) {
-            _ws->close();
-            delete _ws;
-            _ws = NULL;
-        }
     }
 
-    void callback(const std::string& payload) {
+    virtual void callback(const std::string& payload) {
         const auto message = JSON::parse(payload);
         try {
             const std::string event = message["event"];
@@ -120,20 +82,12 @@ public:
             std::cout << "UNEXPECTED PAYLOAD FORMAT: " << payload << std::endl;
         }
     }
-    static void _callback(const std::string& payload, void* _pusher_connection) {
-        PusherConnection& pusher_connection = * (PusherConnection*) _pusher_connection;
-        pusher_connection.callback(payload);
-    }
 
 private:
-    bool _is_running;
     const std::string _key;
     const std::string _cluster;
     const std::string _host;
     const std::string _path;
-    const std::string _url;
-    easywsclient::WebSocket::pointer _ws;
-    std::thread* _thread;
     std::multimap<std::string, PusherChannelSubscription> _subscriptions;
 };
 
