@@ -1,12 +1,26 @@
 #!/bin/bash
+DEBUG=false
+
 INPUT_PATH="$1"
 OUTPUT_PATH="bin/${INPUT_PATH}"
 OUTPUT_PATH="${OUTPUT_PATH%.*}"
 OUTPUT_DIR="$(dirname "${OUTPUT_PATH}")"
 
+if [ "${DEBUG}" = true ] ; then
+    EXECUTION_COMMAND="valgrind ./${OUTPUT_PATH}"
+else
+    EXECUTION_COMMAND="time ./${OUTPUT_PATH}"
+fi
+
+if [ "${DEBUG}" = true ] ; then
+    OPTIONS="${OPTIONS} -g -O0"
+else
+    OPTIONS="${OPTIONS} -O3"
+fi
+
 mkdir -p "${OUTPUT_DIR}"
-time g++ --short-enums -fdiagnostics-color=always -std=c++17 -O2 -Isrc "${INPUT_PATH}" \
+time g++ ${OPTIONS} --short-enums -fdiagnostics-color=always -std=c++17 -Isrc "${INPUT_PATH}" \
     -Wno-write-strings  -Wno-narrowing -Wno-trigraphs \
     -lpthread -lupscaledb -lstdc++fs -lz -lwebsockets -lcurl -ltbb -lncursesw \
-    -o "${OUTPUT_PATH}" && echo && time ./${OUTPUT_PATH}
+    -o "${OUTPUT_PATH}" && echo && ${EXECUTION_COMMAND}
 exit $?
