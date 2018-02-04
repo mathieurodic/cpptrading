@@ -26,15 +26,16 @@ private:
 
 #include <ostream>
 #include <time.h>
-#include <math.h>
+#include <cmath>
 #include <string.h>
 
 template <typename base_type>
 inline std::ostream& operator << (std::ostream& os, const Timestamp<base_type>& timestamp) {
-    if (isnan((double) timestamp)) {
+    const double t = timestamp;
+    if (std::isnan(t)) {
         return (os << "????-??-??T??:??:??");
     } else {
-        const time_t t = (base_type) timestamp;
+        const time_t t = timestamp;
         struct tm lt;
         localtime_r(&t, &lt);
         static const char* format = "%Y-%m-%dT%H:%M:%S";
