@@ -9,8 +9,8 @@
 class History {
 public:
 
-    virtual void record(Trade& trade) = 0;
-    virtual void record(Order& order) = 0;
+    virtual void feed(Trade& trade) = 0;
+    virtual void feed(Order& order) = 0;
 
 };
 

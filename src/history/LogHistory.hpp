@@ -26,10 +26,10 @@ public:
         return _is_stdout ? std::cout : _file;
     }
 
-    virtual void record(Trade& trade) {
+    virtual void feed(Trade& trade) {
         get_output() << trade << '\n';
     }
-    virtual void record(Order& order) {
+    virtual void feed(Order& order) {
         get_output() << order << '\n';
     }
 

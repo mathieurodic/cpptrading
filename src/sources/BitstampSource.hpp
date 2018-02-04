@@ -1,29 +1,30 @@
-#ifndef CTRADING__HISTORY__BITSTAMPHISTORY__HPP
-#define CTRADING__HISTORY__BITSTAMPHISTORY__HPP
+#ifndef CPPTRAING__SOURCES__BITSTAMPSOURCE_HPP
+#define CPPTRAING__SOURCES__BITSTAMPSOURCE_HPP
 
-
-#include <set>
-
-#include "./History.hpp"
-#include "network/Pusher.hpp"
-#include "network/RestClient.hpp"
 
 #include "json.hpp"
 using JSON = nlohmann::json;
 
+#include "./Source.hpp"
+#include "models/Trade.hpp"
+#include "models/Order.hpp"
+#include "network/Pusher.hpp"
+#include "network/RestClient.hpp"
 
-class BitstampHistory : public History {
+#include <string>
+
+
+class BitstampSource : public Source {
 public:
 
-    inline BitstampHistory(const std::string& basepath, const std::string& currency_pair) :
-        History(basepath, currency_pair),
-        _key("de504dc5763aeef9ff52"),
-        _pusher_connection(_key),
+    inline BitstampSource(const std::string& currency_pair) :
+        Source(currency_pair),
+        _pusher_client("de504dc5763aeef9ff52"),
         _rest_client("https://www.bitstamp.net/api/v2")
     {
-        _pusher_connection.subscribe("live_trades_" + _currency_pair, {"trade"}, trades_callback, this);
-        _pusher_connection.subscribe("live_orders_" + _currency_pair, {"order_created", "order_changed", "order_deleted"}, orders_callback, this);
-        _pusher_connection.start();
+        _pusher_client.subscribe("live_trades_" + _currency_pair, {"trade"}, trades_callback, this);
+        _pusher_client.subscribe("live_orders_" + _currency_pair, {"order_created", "order_changed", "order_deleted"}, orders_callback, this);
+        _pusher_client.start();
     }
 
     static const Trade make_trade(const JSON& data) {
@@ -58,21 +59,14 @@ public:
             std::cerr << "ERROR WHILE PARSING ORDER FROM BITSTAMP PUSHER: " << data << std::endl;
             return;
         }
-        BitstampHistory& history = * (BitstampHistory*) user_data;
-
-        // auto missing_order_iterator = history._missing_order_id.find(order.id);
-        // if (missing_order_iterator != history._missing_order_id.end()) {
-        //     std::cout << '\t' << order << std::endl;
-        //     history._missing_order_id.erase(missing_order_iterator);
-        // }
-
-        std::cout << "[" << event << "] " << order << std::endl;
+        BitstampSource& source = * (BitstampSource*) user_data;
+        // std::cout << "[" << event << "] " << order << std::endl;
         if (event == "order_created") {
-            history.order_insert(order);
+            source.feed(order);
         } else if (event == "order_changed") {
-            history.order_update(order);
+            source.feed(order);
         } else if (event == "order_deleted") {
-            history.order_delete(order);
+            source.puke(order);
         }
     }
     static void trades_callback(const std::string& event, const JSON& data, void* user_data) {
@@ -86,22 +80,18 @@ public:
             std::cerr << "ERROR WHILE PARSING TRADE FROM BITSTAMP PUSHER: " << data << std::endl;
             return;
         }
-        BitstampHistory& history = * (BitstampHistory*) user_data;
+        BitstampSource& source = * (BitstampSource*) user_data;
         //
-        history.trade_insert(trade);
-        Order buy_order = history.order_get(trade.buy_order_id);
-        Order sell_order = history.order_get(trade.sell_order_id);
-        std::cout << trade << std::endl;
-        std::cout << '\t' << buy_order << std::endl;
-        std::cout << '\t' << sell_order << std::endl;
+        source.feed(trade);
     }
 
 private:
 
-    const std::string _key;
-    PusherClient _pusher_connection;
+    History* _history;
+    PusherClient _pusher_client;
     RestClient _rest_client;
+
 };
 
 
-#endif // CTRADING__HISTORY__BITSTAMPHISTORY__HPP
+#endif // CPPTRAING__SOURCES__BITSTAMPSOURCE_HPP
