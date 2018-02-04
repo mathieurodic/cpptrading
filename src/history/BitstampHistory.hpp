@@ -99,7 +99,7 @@ public:
 private:
 
     const std::string _key;
-    PusherConnection _pusher_connection;
+    PusherClient _pusher_connection;
     RestClient _rest_client;
 };
 
