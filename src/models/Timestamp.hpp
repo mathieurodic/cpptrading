@@ -26,10 +26,12 @@ private:
 
 #include <ostream>
 #include <time.h>
+#include <math.h>
+#include <string.h>
 
 template <typename base_type>
 inline std::ostream& operator << (std::ostream& os, const Timestamp<base_type>& timestamp) {
-    if (std::isnan(timestamp)) {
+    if (isnan((double) timestamp)) {
         return (os << "????-??-??T??:??:??");
     } else {
         const time_t t = (base_type) timestamp;
