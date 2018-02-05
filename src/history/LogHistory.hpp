@@ -32,6 +32,9 @@ public:
     virtual void feed(Order& order) {
         get_output() << order << '\n';
     }
+    virtual void feed(Decision& decision) {
+        get_output() << decision << '\n';
+    }
 
 private:
     const std::string _path;

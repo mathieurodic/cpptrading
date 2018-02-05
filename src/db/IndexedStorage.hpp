@@ -26,6 +26,10 @@ public:
         return true;
     }
 
+    inline void insert(record_t& record) {
+        _logger_writer.append(record);
+    }
+
     template <typename index_t>
     inline const bool integrity_check(index_t& index) {
         record_t record;
