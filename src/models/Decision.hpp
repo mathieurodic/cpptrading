@@ -27,6 +27,10 @@ struct Decision {
         source{0} {}
     inline const bool operator==(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
 
+    inline const bool parse(const std::string& source) {
+        return false;
+    }
+
     ActionType type;
     int key;
     double decision_timestamp;

@@ -3,6 +3,9 @@
 
 
 #include <stdint.h>
+#include <inttypes.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "./ActionType.hpp"
 #include "./Timestamp.hpp"
@@ -11,7 +14,46 @@
 #pragma pack(push, 1)
 
 struct Trade {
-    inline const bool operator==(const Trade& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
+
+    inline const bool operator==(const Trade& other) const {
+        return memcmp(this, &other, sizeof(*this)) == 0;
+    }
+
+    inline const bool parse(const std::string& source) {
+        struct tm t;
+        char tmp_type[8];
+        int year;
+        int result = sscanf(source.c_str(), "<Trade id=%" PRIu64 " buy_order_id=%" PRIu64 " sell_order_id=%" PRIu64 " timestamp=%d-%d-%dT%d:%d:%d type=%c%c%c%c price=%lf volume=%lf>",
+            &id,
+            &buy_order_id,
+            &sell_order_id,
+            &year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec,
+            tmp_type, tmp_type+1, tmp_type+2, tmp_type+3,
+            &price,
+            &volume
+        );
+        if (result != 15) {
+            return false;
+        }
+        t.tm_year = year - 1900;
+        t.tm_mon -= 1;
+        timestamp = mktime(&t);
+        switch (tmp_type[0]) {
+            case 'W':
+                type = WAIT;
+                break;
+            case 'S':
+                type = SELL;
+                break;
+            case 'B':
+                type = BUY;
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
     uint64_t id;
     double volume;
     double price;
