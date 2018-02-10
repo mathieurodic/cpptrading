@@ -17,12 +17,13 @@ public:
         Source(currency_pair),
         _path(path) {}
 
-    inline void parse() {
+    inline void parse(const size_t limit=-1) {
         FILE* file = fopen(_path.c_str(), "r");
         if (file == NULL) {
             throw FileException("CSVSource could not open file for reading", _path, strerror(errno));
         }
-        while (true) {
+        size_t count = 0;
+        while (++count <= limit) {
             Trade trade = {0};
             const int result = fscanf(file, "%lf,%lf,%lf\n", &trade.timestamp, &trade.price, &trade.volume);
             if (result == EOF || result != 3) {

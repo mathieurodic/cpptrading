@@ -2,52 +2,14 @@
 #define CTRADING__HISTORY__HISTORY__HPP
 
 
-#include <models/Trade.hpp>
-#include <models/TradeAverage.hpp>
-#include <models/Order.hpp>
-#include <models/Decision.hpp>
+#include "models/Trade.hpp"
+#include "models/TradeAverage.hpp"
+#include "models/Order.hpp"
+#include "models/Decision.hpp"
 
+#include "iteration.hpp"
 
-template <typename Model>
-class HistoryIterator {
-public:
-
-    HistoryIterator() : _is_finished(true) {}
-
-    virtual const Model& operator*() const {
-        return _value;
-    }
-
-    virtual void operator++() {}
-
-    virtual const bool operator!=(const HistoryIterator<Model>& other) const {
-        return _is_finished != other._is_finished;
-    }
-
-private:
-
-    bool _is_finished;
-    Model _value;
-
-};
-
-
-template <typename Model>
-class HistoryRange {
-public:
-
-    HistoryRange() {}
-
-    virtual HistoryIterator<Model> begin() {
-        return HistoryIterator<Model>();
-    }
-    const HistoryIterator<Model>& end() const {
-        return _end;
-    }
-
-private:
-    static const HistoryIterator<Model> _end;
-};
+#include <unordered_set>
 
 
 class History {
@@ -61,11 +23,48 @@ public:
         return TradeAverage();
     }
 
-    virtual HistoryRange<Trade> get_trades() {
-        return HistoryRange<Trade>();
-    }
-
 };
+
+
+template <typename Model, typename History1, typename History2,
+    typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
+    typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
+inline void synchronize(History1& history_1, History2& history_2) {
+    std::unordered_set<Model> specific_instances_1;
+    for (const Model& instance : history_1.template get_all<Model>()) {
+        // std::cout << "THIS: " << instance << '\n';
+        specific_instances_1.insert(instance);
+    }
+    //
+    std::unordered_set<Model> specific_instances_2;
+    for (const Model& instance : history_2.template get_all<Model>()) {
+        // std::cout << "OTHER: " << instance << '\n';
+        auto it = specific_instances_1.find(instance);
+        if (it == specific_instances_1.end()) {
+            specific_instances_2.insert(instance);
+        } else {
+            specific_instances_1.erase(it);
+        }
+    }
+    //
+    std::cout << "history_1 -> history_2: " << specific_instances_1.size() << '\n';
+    for (Model instance : specific_instances_1) {
+        history_2.feed(instance);
+    }
+    std::cout << "history_2 -> history_1: " << specific_instances_2.size() << '\n';
+    for (Model instance : specific_instances_2) {
+        history_1.feed(instance);
+    }
+}
+
+template <typename History1, typename History2,
+    typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
+    typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
+inline void synchronize(History1& history_1, History2& history_2) {
+    synchronize<Trade>(history_1, history_2);
+    synchronize<Order>(history_1, history_2);
+    synchronize<Decision>(history_1, history_2);
+}
 
 
 #endif // CTRADING__HISTORY__HISTORY__HPP

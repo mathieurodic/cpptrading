@@ -11,7 +11,7 @@
 #pragma pack(push, 1)
 
 struct Trade {
-    inline const bool operator==(const Trade& other) { return memcmp(this, &other, sizeof(*this)) == 0; }
+    inline const bool operator==(const Trade& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
     uint64_t id;
     double volume;
     double price;
@@ -44,6 +44,25 @@ inline std::ostream& operator << (std::ostream& os, const Trade& trade) {
         << " volume=" << trade.volume
         << ">"
     );
+}
+
+
+namespace std {
+    template<>
+    struct hash<Trade> {
+        size_t operator()(const Trade& trade) const
+        {
+            static const size_t n = sizeof(Trade) / sizeof(size_t);
+            size_t result;
+            for (size_t i=0; i<n; ++i) {
+                result ^= * (((size_t*) &trade) + i);
+            }
+            if (sizeof(Trade) % sizeof(size_t)) {
+                result ^= * (size_t*) (((char*) &trade) + sizeof(Trade) - sizeof(size_t));
+            }
+            return result;
+        }
+    };
 }
 
 

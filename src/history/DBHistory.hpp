@@ -3,6 +3,7 @@
 
 
 #include <string>
+#include <deque>
 #include <set>
 #include <chrono>
 #include <thread>
@@ -17,7 +18,7 @@
 #include "./History.hpp"
 
 
-class DBHistory : public History {
+class DBHistory : public History{
 public:
 
     inline DBHistory(const std::string& basepath) :
@@ -45,6 +46,12 @@ public:
         return result;
     }
 
+    template <typename Model>
+    RotatingLogRange<Model> get_all() {
+        static const RotatingLogRange<Model> empty_range;
+        return empty_range;
+    }
+
 protected:
 
     const std::string _basepath;
@@ -56,6 +63,20 @@ private:
     INDEXED_STORAGE(Decision, decision_timestamp, RotatingLog, UpscaleBTree) _decisions;
 
 };
+
+
+template <>
+RotatingLogRange<Trade> DBHistory::get_all<Trade>() {
+    return _trades.get_all();
+}
+template <>
+RotatingLogRange<Order> DBHistory::get_all<Order>() {
+    return _orders.get_all();
+}
+template <>
+RotatingLogRange<Decision> DBHistory::get_all<Decision>() {
+    return _decisions.get_all();
+}
 
 
 #endif // CTRADING__HISTORY__DBHISTORY__HPP

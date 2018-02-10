@@ -36,6 +36,11 @@ public:
         get_output() << decision << '\n';
     }
 
+    Range<Trade> get_trades() {
+        return Range<Trade>();
+    }
+
+
 private:
     const std::string _path;
     const bool _is_stdout;

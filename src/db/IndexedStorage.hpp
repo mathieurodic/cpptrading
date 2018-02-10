@@ -42,6 +42,10 @@ public:
         return true;
     }
 
+    inline typename logger_t::template Range<record_t> get_all() {
+        return _logger_writer.template get_all<record_t>();
+    }
+
 protected:
     const std::string _path;
     const bool _path_is_initialized;

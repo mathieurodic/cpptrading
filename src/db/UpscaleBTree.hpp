@@ -240,7 +240,7 @@ public:
         UPS_SAFE_CALL(ups_env_create,
             &_ups_env,
             _path.c_str(),
-            UPS_ENABLE_TRANSACTIONS  |  (_autocommit ? UPS_ENABLE_FSYNC : 0),
+            UPS_AUTO_RECOVERY | UPS_ENABLE_TRANSACTIONS | (_autocommit ? UPS_ENABLE_FSYNC : 0),
             0644,
             ups_env_parameters
         );

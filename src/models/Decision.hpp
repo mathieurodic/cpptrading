@@ -25,7 +25,7 @@ struct Decision {
         minimum_price(NAN),
         maximum_price(NAN),
         source{0} {}
-    inline const bool operator==(const Decision& other) { return memcmp(this, &other, sizeof(*this)) == 0; }
+    inline const bool operator==(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
 
     ActionType type;
     int key;
@@ -94,6 +94,25 @@ inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
         << " order_id=" << decision.order_id
         << ">"
     );
+}
+
+
+namespace std {
+    template<>
+    struct hash<Decision> {
+        size_t operator()(const Decision& decision) const
+        {
+            static const size_t n = sizeof(Decision) / sizeof(size_t);
+            size_t result;
+            for (size_t i=0; i<n; ++i) {
+                result ^= * (((size_t*) &decision) + i);
+            }
+            if (sizeof(Decision) % sizeof(size_t)) {
+                result ^= * (size_t*) (((char*) &decision) + sizeof(Decision) - sizeof(size_t));
+            }
+            return result;
+        }
+    };
 }
 
 

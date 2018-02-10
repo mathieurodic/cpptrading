@@ -11,7 +11,7 @@
 #pragma pack(push, 1)
 
 struct Order {
-    inline const bool operator==(const Order& other) { return memcmp(this, &other, sizeof(*this)) == 0; }
+    inline const bool operator==(const Order& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
     uint64_t id;
     double amount;
     double price;
@@ -40,6 +40,24 @@ inline std::ostream& operator << (std::ostream& os, const Order& order) {
         << " amount=" << order.amount
         << ">"
     );
+}
+
+namespace std {
+    template<>
+    struct hash<Order> {
+        size_t operator()(const Order& order) const
+        {
+            static const size_t n = sizeof(Order) / sizeof(size_t);
+            size_t result;
+            for (size_t i=0; i<n; ++i) {
+                result ^= * (((size_t*) &order) + i);
+            }
+            if (sizeof(Order) % sizeof(size_t)) {
+                result ^= * (size_t*) (((char*) &order) + sizeof(Order) - sizeof(size_t));
+            }
+            return result;
+        }
+    };
 }
 
 
