@@ -27,13 +27,13 @@ public:
     }
 
     virtual void feed(Trade& trade) {
-        get_output() << trade << '\n';
+        _feed(trade);
     }
     virtual void feed(Order& order) {
-        get_output() << order << '\n';
+        _feed(order);
     }
     virtual void feed(Decision& decision) {
-        get_output() << decision << '\n';
+        _feed(decision);
     }
 
     Range<Trade> get_trades() {
@@ -42,6 +42,12 @@ public:
 
 
 private:
+
+    template <typename Model>
+    inline void _feed(Model& instance) {
+        (get_output() << instance << '\n').flush();
+    }
+
     const std::string _path;
     const bool _is_stdout;
     std::ofstream _file;
