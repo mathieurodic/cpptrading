@@ -10,6 +10,7 @@
 #include "iteration.hpp"
 
 #include <unordered_set>
+#include <ostream>
 
 
 class History {
@@ -29,7 +30,7 @@ public:
 template <typename Model, typename History1, typename History2,
     typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
     typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
-inline void synchronize(History1& history_1, History2& history_2) {
+inline std::pair<size_t, size_t> synchronize(History1& history_1, History2& history_2) {
     std::unordered_set<Model> specific_instances_1;
     for (const Model& instance : history_1.template get_all<Model>()) {
         // std::cout << "THIS: " << instance << '\n';
@@ -47,23 +48,43 @@ inline void synchronize(History1& history_1, History2& history_2) {
         }
     }
     //
-    std::cout << "history_1 -> history_2: " << specific_instances_1.size() << '\n';
     for (Model instance : specific_instances_1) {
         history_2.feed(instance);
     }
-    std::cout << "history_2 -> history_1: " << specific_instances_2.size() << '\n';
     for (Model instance : specific_instances_2) {
         history_1.feed(instance);
     }
+    //
+    return {specific_instances_1.size(), specific_instances_2.size()};
 }
+
+
+struct SynchronizationResult {
+    std::pair<size_t, size_t> trades;
+    std::pair<size_t, size_t> orders;
+    std::pair<size_t, size_t> decisions;
+};
+
+
+inline std::ostream& operator<<(std::ostream& os, const SynchronizationResult result) {
+    return (os
+        << "<SynchronizationResult trades:(" << result.trades.first << ", " << result.trades.second << ")"
+        << " orders:(" << result.orders.first << ", " << result.orders.second << ")"
+        << " decisions:(" << result.decisions.first << ", " << result.decisions.second << ")"
+        << ">"
+    );
+}
+
 
 template <typename History1, typename History2,
     typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
     typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
-inline void synchronize(History1& history_1, History2& history_2) {
-    synchronize<Trade>(history_1, history_2);
-    synchronize<Order>(history_1, history_2);
-    synchronize<Decision>(history_1, history_2);
+inline const SynchronizationResult synchronize(History1& history_1, History2& history_2) {
+    SynchronizationResult result;
+    result.trades = synchronize<Trade>(history_1, history_2);
+    result.orders = synchronize<Order>(history_1, history_2);
+    result.decisions = synchronize<Decision>(history_1, history_2);
+    return result;
 }
 
 
