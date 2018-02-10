@@ -141,7 +141,6 @@ public:
 private:
 
     const std::string _basepath;
-    T _value;
 
 };
 
