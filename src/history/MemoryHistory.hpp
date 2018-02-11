@@ -37,6 +37,23 @@ public:
         return empty_deque;
     }
 
+    virtual Span get_time_span() {
+        Span span;
+        {
+            auto it = _trades_by_timestamp.begin();
+            if (it != _trades_by_timestamp.end()) {
+                span.min = it->first;
+            }
+        }
+        {
+            auto it = _trades_by_timestamp.rbegin();
+            if (it != _trades_by_timestamp.rend()) {
+                span.max = it->first;
+            }
+        }
+        return span;
+    }
+
 protected:
 
     const std::string _basepath;

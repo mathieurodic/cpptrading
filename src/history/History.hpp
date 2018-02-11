@@ -13,6 +13,20 @@
 #include <ostream>
 
 
+struct Span {
+    double min;
+    double max;
+    void operator += (const double& value) {
+        min += value;
+        max += value;
+    }
+    void operator -= (const double& value) {
+        min -= value;
+        max -= value;
+    }
+};
+
+
 class History {
 public:
 
@@ -22,6 +36,18 @@ public:
 
     virtual TradeAverage get_average(const double& timestamp_begin, const double timestamp_end) {
         return TradeAverage();
+    }
+
+    template <typename Model>
+    Range<Model> get_all() {
+        return Range<Model>();
+    }
+
+    virtual Span get_time_span() {
+        return {
+            .min = NAN,
+            .max = NAN,
+        };
     }
 
 };
