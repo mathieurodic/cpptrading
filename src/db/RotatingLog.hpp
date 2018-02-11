@@ -26,7 +26,6 @@ public:
             const std::string filepath = p.path().string();
             if (filepath.rfind(_basepath, 0) == 0) {
                 _paths.insert(filepath);
-                std::cout << "filepath = " << filepath << '\n';
             }
         }
         _paths_it = _paths.begin();
@@ -129,12 +128,9 @@ template <typename T>
 class RotatingLogRange : public Range<T, RotatingLogIterator<T>> {
 public:
 
-    inline RotatingLogRange(const std::string& basepath) : _basepath(basepath) {
-        std::cout << "basepath = " << basepath << '\n';
-    }
+    inline RotatingLogRange(const std::string& basepath) : _basepath(basepath) {}
 
     RotatingLogIterator<T> begin() {
-        std::cout << "BEGIN " << _basepath << '\n';
         return RotatingLogIterator<T>(_basepath);
     }
 
