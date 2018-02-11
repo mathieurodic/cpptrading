@@ -1,12 +1,45 @@
-#include "bots/Bot.hpp"
-#include "history/History.hpp"
-#include "brokers/Broker.hpp"
+#include <iostream>
+
+#include "history/LogHistory.hpp"
+#include "brokers/PretendBroker.hpp"
+
+
+static const bool must_parse = false;
 
 
 int main(int argc, char const *argv[]) {
-    History history("db/test-broker", "btceur");
-    Bot bot;
-    Broker broker(history, bot);
-    broker.start(3);
+    LogHistory log_history;
+    PretendBroker broker(1000, 2.5e-3);
+    broker.historize(log_history);
+
+    std::cout << broker << '\n';
+    {
+        Decision decision;
+        decision.type = BUY;
+        decision.amount = 10;
+        decision.price = 10000;
+        broker.execute(decision);
+        std::cout << broker << '\n';
+    }
+    {
+        Decision decision;
+        decision.type = BUY;
+        decision.price = 10000;
+        broker.execute(decision);
+        std::cout << broker << '\n';
+    }
+    {
+        Decision decision;
+        decision.type = WAIT;
+        broker.execute(decision);
+        std::cout << broker << '\n';
+    }
+    {
+        Decision decision;
+        decision.type = SELL;
+        decision.price = 12345;
+        broker.execute(decision);
+        std::cout << broker << '\n';
+    }
     return 0;
 }

@@ -2,51 +2,115 @@
 #define CTRADING__BROKERS__BROKER__HPP
 
 
-#include <unistd.h>
-#include <sys/time.h>
+#include <set>
 
 
 class Broker {
 public:
 
-    inline Broker(History& history, Bot& bot) :
-        _history(history),
-        _bot(bot),
-        _is_running(false) {}
+    inline Broker() :
+        _commission(0.) {}
 
-    virtual void execute(Decision& decision) {
-        std::cout << decision << '\n';
+    virtual const std::string get_name() const {
+        return "Broker";
     }
 
-    static inline double get_timestamp(const struct timeval& tv) {
-        return tv.tv_sec + tv.tv_usec * 1e-6;
-    }
-    static inline double get_timestamp() {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return get_timestamp(tv);
+    inline void historize(History& history) {
+        _histories.insert(&history);
     }
 
-    inline void start(const double interval) {
-        _is_running = true;
-        double previous_timestamp = get_timestamp() - interval;
-        while (_is_running) {
-            double timestamp;
-            do {
-                timestamp = get_timestamp();
-                usleep(1000);
-            } while (_is_running && timestamp - previous_timestamp < interval);
-            Decision decision = _bot.decide(_history, timestamp);
-            previous_timestamp = timestamp;
-            execute(decision);
+    virtual void send(Decision& decision) = 0;
+
+    const bool validate(Decision& decision) {
+        if (decision.type == WAIT) {
+            return false;
+        }
+        if (std::isnan(decision.price)) {
+            return false;
+        }
+        if (std::isnan(decision.amount) && std::isnan(decision.stock_amount)) {
+            switch (decision.type) {
+                case BUY:
+                    decision.amount = _balance;
+                    break;
+                case SELL:
+                    decision.stock_amount = _stock_balance;
+                    break;
+            }
+        }
+        if (std::isnan(decision.amount)) {
+            decision.amount = decision.stock_amount * decision.price;
+        }
+        if (std::isnan(decision.stock_amount)) {
+            decision.stock_amount = decision.amount / decision.price;
+        }
+        if (decision.type == BUY && decision.amount > _balance) {
+            return false;
+        }
+        if (decision.type == SELL && decision.stock_amount > _stock_balance) {
+            return false;
+        }
+        return true;
+    }
+
+    void feed(Decision& decision) {
+        for (auto history : _histories) {
+            history->feed(decision);
         }
     }
 
-private:
-    bool _is_running;
-    History& _history;
-    Bot& _bot;
+    void execute(Decision& decision) {
+        Decision original_decision = decision;
+        if (validate(decision)) {
+            send(decision);
+        } else {
+            decision.cancelled = true;
+        }
+        if (!decision.cancelled) {
+            switch (decision.type) {
+                case BUY:
+                    this->_balance -= decision.amount;
+                    this->_stock_balance += decision.stock_amount * (1. - _commission);
+                    break;
+                case SELL:
+                    this->_balance += decision.amount * (1. - _commission);
+                    this->_stock_balance -= decision.stock_amount;
+                    break;
+            }
+        }
+        if (original_decision != decision) {
+            feed(original_decision);
+        }
+        feed(decision);
+    }
+
+    inline const double& get_balance() {
+        return _balance;
+    }
+    inline const double& get_stock_balance() {
+        return _stock_balance;
+    }
+
+protected:
+
+    std::set<History*> _histories;
+    double _balance;
+    double _stock_balance;
+    double _commission;
+
 };
+
+
+#include <ostream>
+
+inline std::ostream& operator<<(std::ostream& os, Broker& broker) {
+    return (os
+        << "<" << broker.get_name()
+        << " balance=" << broker.get_balance()
+        << " stock_balance=" << broker.get_stock_balance()
+        << ">"
+    );
+}
 
 
 #endif // CTRADING__BROKERS__BROKER__HPP
