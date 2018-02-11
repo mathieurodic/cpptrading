@@ -80,6 +80,10 @@ public:
         _deleted_orders_ids.insert(order.id);
     }
 
+    inline double get_last_timestamp() const {
+        return _last_timestamp;
+    }
+
 protected:
 
     const std::string _currency_pair;
