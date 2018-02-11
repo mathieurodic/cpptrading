@@ -80,7 +80,7 @@ inline std::ostream& operator << (std::ostream& os, const Trade& trade) {
         << " id=" << trade.id
         << " buy_order_id=" << trade.buy_order_id
         << " sell_order_id=" << trade.sell_order_id
-        << " timestamp=" << Timestamp<double>(trade.timestamp)
+        << " timestamp=" << Timestamp(trade.timestamp)
         << " type=" << trade.type
         << " price=" << (int)(trade.price) << '.' << decimals
         << " volume=" << trade.volume

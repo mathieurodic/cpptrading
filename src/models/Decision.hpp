@@ -13,6 +13,7 @@
 #pragma pack(push, 1)
 
 struct Decision {
+
     inline Decision() :
         type(WAIT),
         key(rand()),
@@ -25,7 +26,12 @@ struct Decision {
         minimum_price(NAN),
         maximum_price(NAN),
         source{0} {}
+
     inline const bool operator==(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
+
+    inline operator bool () const {
+        return type != WAIT;
+    }
 
     inline const bool parse(const std::string& source) {
         return false;
@@ -60,9 +66,9 @@ inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
     (os
         << "<Decision"
         << " type=" << decision.type
-        << " decision_timestamp=" << Timestamp<double>(decision.decision_timestamp)
-        << " action_timestamp=" << Timestamp<double>(decision.action_timestamp)
-        << " execution_timestamp=" << Timestamp<double>(decision.execution_timestamp)
+        << " decision_timestamp=" << Timestamp(decision.decision_timestamp)
+        << " action_timestamp=" << Timestamp(decision.action_timestamp)
+        << " execution_timestamp=" << Timestamp(decision.execution_timestamp)
     );
     os << " minimum_price=";
     if (std::isnan(decision.minimum_price)) {

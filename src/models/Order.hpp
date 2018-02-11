@@ -39,7 +39,7 @@ inline std::ostream& operator << (std::ostream& os, const Order& order) {
     return (os
         << "<Order"
         << " id=" << order.id
-        << " timestamp=" << Timestamp<double>(order.timestamp)
+        << " timestamp=" << Timestamp(order.timestamp)
         << " type=" << order.type
         << " price=" << (int)(order.price) << '.' << decimals
         << " amount=" << order.amount
