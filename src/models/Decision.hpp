@@ -17,14 +17,15 @@ struct Decision {
     inline Decision() :
         type(WAIT),
         key(rand()),
-        decision_timestamp(time(NULL)),
+        passed(false),
+        cancelled(false),
         action_timestamp(NAN),
         execution_timestamp(NAN),
         confidence(NAN),
         order_id(0),
-        amount(0.0),
-        minimum_price(NAN),
-        maximum_price(NAN),
+        amount(NAN),
+        stock_amount(NAN),
+        price(NAN),
         source{0} {}
 
     inline const bool operator==(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
@@ -39,13 +40,15 @@ struct Decision {
 
     ActionType type;
     int key;
-    double decision_timestamp;
-    double action_timestamp;
-    double execution_timestamp;
+    bool cancelled;
+    bool passed;
+    Timestamp decision_timestamp;
+    Timestamp action_timestamp;
+    Timestamp execution_timestamp;
     double confidence;
     double amount;
-    double minimum_price;
-    double maximum_price;
+    double stock_amount;
+    double price;
     uint64_t order_id;
     char source[32];
 };
@@ -59,36 +62,28 @@ struct Decision {
 
 inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
 
-    std::string max_decimals = std::to_string((int)(100.0 * decision.maximum_price) % 100);
+    std::string max_decimals = std::to_string((int)(100.0 * decision.price) % 100);
     if (max_decimals.size() < 2) {
         max_decimals += '0';
     }
     (os
         << "<Decision"
         << " type=" << decision.type
+        << " passed=" << decision.passed
+        << " cancelled=" << decision.cancelled
         << " decision_timestamp=" << Timestamp(decision.decision_timestamp)
         << " action_timestamp=" << Timestamp(decision.action_timestamp)
         << " execution_timestamp=" << Timestamp(decision.execution_timestamp)
     );
-    os << " minimum_price=";
-    if (std::isnan(decision.minimum_price)) {
+    os << " price=";
+    if (std::isnan(decision.price)) {
         os << "????.??";
     } else {
-        std::string decimals = std::to_string((int)(100.0 * decision.minimum_price) % 100);
+        std::string decimals = std::to_string((int)(100.0 * decision.price) % 100);
         if (decimals.size() < 2) {
             decimals += '0';
         }
-        os << (int)(decision.minimum_price) << '.' << decimals;
-    }
-    os << " maximum_price=";
-    if (std::isnan(decision.maximum_price)) {
-        os << "????.??";
-    } else {
-        std::string decimals = std::to_string((int)(100.0 * decision.maximum_price) % 100);
-        if (decimals.size() < 2) {
-            decimals += '0';
-        }
-        os << (int)(decision.maximum_price) << '.' << decimals;
+        os << (int)(decision.price) << '.' << decimals;
     }
     os << " amount=";
     if (std::isnan(decision.amount)) {
