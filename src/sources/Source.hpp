@@ -18,7 +18,7 @@ public:
         _is_running(true),
         _last_timestamp(0),
         _currency_pair(currency_pair),
-        _cleanup_period(10.0),
+        _cleanup_period(0.5),
         _cleanup_threshold(60.0),
         _cleanup_thread(std::thread(_cleanup, this))
     {}
