@@ -17,18 +17,17 @@ struct Decision {
     inline Decision() :
         type(WAIT),
         key(rand()),
-        passed(false),
-        cancelled(false),
+        status(PENDING),
         action_timestamp(NAN),
         execution_timestamp(NAN),
         confidence(NAN),
         order_id(0),
         amount(NAN),
-        stock_amount(NAN),
         price(NAN),
         source{0} {}
 
     inline const bool operator==(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
+    inline const bool operator!=(const Decision& other) const { return memcmp(this, &other, sizeof(*this)) != 0; }
 
     inline operator bool () const {
         return type != WAIT;
@@ -40,14 +39,16 @@ struct Decision {
 
     ActionType type;
     int key;
-    bool cancelled;
-    bool passed;
+    enum {
+        CANCELLED = -1,
+        PENDING = 0,
+        PASSED = 1
+    } status;
     Timestamp decision_timestamp;
     Timestamp action_timestamp;
     Timestamp execution_timestamp;
     double confidence;
     double amount;
-    double stock_amount;
     double price;
     uint64_t order_id;
     char source[32];
@@ -61,43 +62,22 @@ struct Decision {
 #include <string>
 
 inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
-
-    std::string max_decimals = std::to_string((int)(100.0 * decision.price) % 100);
-    if (max_decimals.size() < 2) {
-        max_decimals += '0';
+    std::string status;
+    switch (decision.status) {
+        case Decision::CANCELLED: status = "CANCELLED"; break;
+        case Decision::PENDING:   status = "PENDING  "; break;
+        case Decision::PASSED:    status = "PASSED   "; break;
     }
-    (os
+    return (os
         << "<Decision"
         << " type=" << decision.type
-        << " passed=" << decision.passed
-        << " cancelled=" << decision.cancelled
+        << " status=" << decision.status
         << " decision_timestamp=" << Timestamp(decision.decision_timestamp)
         << " action_timestamp=" << Timestamp(decision.action_timestamp)
         << " execution_timestamp=" << Timestamp(decision.execution_timestamp)
-    );
-    os << " price=";
-    if (std::isnan(decision.price)) {
-        os << "????.??";
-    } else {
-        std::string decimals = std::to_string((int)(100.0 * decision.price) % 100);
-        if (decimals.size() < 2) {
-            decimals += '0';
-        }
-        os << (int)(decision.price) << '.' << decimals;
-    }
-    os << " amount=";
-    if (std::isnan(decision.amount)) {
-        os << "?.????";
-    } else {
-        std::string decimals = std::to_string((int)(100.0 * decision.amount) % 100);
-        if (decimals.size() < 2) {
-            decimals += '0';
-        }
-        os << (int)(decision.amount) << '.' << decimals;
-    }
-    return (os
+        << " price=" << decision.price
+        << " amount=" << decision.amount
         << " order_id=" << decision.order_id
-        << ">"
     );
 }
 

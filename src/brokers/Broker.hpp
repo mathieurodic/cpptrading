@@ -28,27 +28,15 @@ public:
         if (std::isnan(decision.price)) {
             return false;
         }
-        if (std::isnan(decision.amount) && std::isnan(decision.stock_amount)) {
+        if (std::isnan(decision.amount)) {
             switch (decision.type) {
                 case BUY:
-                    decision.amount = _balance;
+                    decision.amount = _balance / decision.price;
                     break;
                 case SELL:
-                    decision.stock_amount = _stock_balance;
+                    decision.amount = _stock_balance;
                     break;
             }
-        }
-        if (std::isnan(decision.amount)) {
-            decision.amount = decision.stock_amount * decision.price;
-        }
-        if (std::isnan(decision.stock_amount)) {
-            decision.stock_amount = decision.amount / decision.price;
-        }
-        if (decision.type == BUY && decision.amount > _balance) {
-            return false;
-        }
-        if (decision.type == SELL && decision.stock_amount > _stock_balance) {
-            return false;
         }
         return true;
     }
@@ -64,17 +52,17 @@ public:
         if (validate(decision)) {
             send(decision);
         } else {
-            decision.cancelled = true;
+            decision.status = Decision::CANCELLED;
         }
-        if (!decision.cancelled) {
+        if (decision.status == Decision::PASSED) {
             switch (decision.type) {
                 case BUY:
-                    this->_balance -= decision.amount;
-                    this->_stock_balance += decision.stock_amount * (1. - _commission);
+                    this->_balance -= decision.amount * decision.price;
+                    this->_stock_balance += decision.amount * (1. - _commission);
                     break;
                 case SELL:
-                    this->_balance += decision.amount * (1. - _commission);
-                    this->_stock_balance -= decision.stock_amount;
+                    this->_balance += decision.amount * decision.price * (1. - _commission);
+                    this->_stock_balance -= decision.amount;
                     break;
             }
         }

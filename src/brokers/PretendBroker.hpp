@@ -22,7 +22,7 @@ public:
     }
 
     virtual void send(Decision& decision) {
-        decision.passed = true;
+        decision.status = Decision::PASSED;
         decision.action_timestamp = decision.decision_timestamp;
         decision.execution_timestamp = decision.decision_timestamp;
     }
