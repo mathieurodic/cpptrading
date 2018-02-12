@@ -71,7 +71,7 @@ inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
     return (os
         << "<Decision"
         << " type=" << decision.type
-        << " status=" << decision.status
+        << " status=" << status
         << " decision_timestamp=" << Timestamp(decision.decision_timestamp)
         << " action_timestamp=" << Timestamp(decision.action_timestamp)
         << " execution_timestamp=" << Timestamp(decision.execution_timestamp)

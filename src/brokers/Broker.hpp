@@ -38,6 +38,9 @@ public:
                     break;
             }
         }
+        if (decision.amount == 0.) {
+            return false;
+        }
         return true;
     }
 
