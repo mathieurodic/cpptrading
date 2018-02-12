@@ -360,7 +360,7 @@ public:
         return record;
     }
 
-    inline UpscaleBTreeRange<key_t, record_t> get_all() {
+    inline UpscaleBTreeRange<key_t, record_t> get() {
         return UpscaleBTreeRange<key_t, record_t>(_ups_db, _ups_read_txn);
     }
     inline UpscaleBTreeRange<key_t, record_t> get_range(key_t key_begin, key_t key_end) {

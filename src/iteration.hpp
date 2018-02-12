@@ -2,50 +2,102 @@
 #define CPPTRADING__ITERATION_HPP
 
 
+#include <stdlib.h>
+
+
+template <typename T>
+class RangeData {
+public:
+
+    virtual const bool init(T& value) = 0;
+    virtual const bool next(T& value) = 0;
+
+};
+
+
 template <typename T>
 class Iterator {
 public:
 
-    Iterator(const bool is_finished=true) :
-        _is_finished(is_finished) {}
+    inline Iterator() :
+        _is_finished(true) {}
+    inline Iterator(RangeData<T>* range_data) :
+        _range_data(range_data),
+        _is_finished(! range_data->init(_value)) {}
 
-    virtual const T& operator*() const {
+    inline void operator ++ () {
+        if (!_is_finished && _range_data) {
+            _is_finished = ! _range_data->next(_value);
+        }
+    }
+
+    inline const T& operator * () const {
         return _value;
     }
 
-    virtual void operator++() {}
-
-    virtual const bool operator!=(const Iterator<T>& other) const {
+    template <typename OtherItem>
+    inline const bool operator != (const OtherItem& other) const {
         return _is_finished != other._is_finished;
     }
 
-protected:
+private:
 
     bool _is_finished;
+    RangeData<T>* _range_data;
     T _value;
 
 };
 
 
-template <typename T, typename IteratorT = Iterator<T>>
+template <typename T>
 class Range {
 public:
 
-    Range() {}
+    inline Range() :
+        _range_data(NULL),
+        _counter(0),
+        _root_counter(_counter) {}
 
-    virtual IteratorT begin() {
-        return _end;
+    inline Range(const Range<T>& source) :
+        _range_data(source._range_data),
+        _counter(0),
+        _root_counter(source._root_counter)
+    {
+        ++source._root_counter;
     }
-    inline const IteratorT& end() const {
-        return _end;
+    inline Range(RangeData<T>* _range_data) :
+        _range_data(_range_data),
+        _counter(1),
+        _root_counter(_counter) {}
+
+    inline ~Range() {
+        if (--_root_counter < 1 && _range_data != NULL) {
+            delete _range_data;
+            _range_data = NULL;
+        }
+    }
+
+    inline Iterator<T> begin() {
+        if (_range_data == NULL) {
+            return _end_iterator;
+        }
+        return Iterator<T>(_range_data);
+    }
+    inline Iterator<T> end() {
+        return _end_iterator;
     }
 
 private:
-    static const IteratorT _end;
+
+    int _counter;
+    int& _root_counter;
+    RangeData<T>* _range_data;
+    static const Iterator<T> _end_iterator;
+
 };
 
-template <typename T, typename IteratorT>
-const IteratorT Range<T, IteratorT>::_end;
+template <typename T>
+const Iterator<T> Range<T>::_end_iterator;
 
 
 #endif // CPPTRADING__ITERATION_HPP

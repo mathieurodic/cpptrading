@@ -13,7 +13,7 @@ int main(int argc, char const *argv[]) {
 
     const std::string basepath = "/tmp/cpptrading-test-rotatinglog";
     const int seed = 123;
-    const int count = 100000;
+    const int count = 100;
     const double milliseconds = .1;
 
     if (execl("rm", (basepath + '*').c_str()) == -1) {
@@ -26,7 +26,6 @@ int main(int argc, char const *argv[]) {
         srand(seed);
         for (size_t i=0; i<count; ++i) {
             item_t item(rand());
-            // std::cout << item << '\n';
             logger.append(item);
             if (milliseconds) {
                 usleep(milliseconds * 1000);

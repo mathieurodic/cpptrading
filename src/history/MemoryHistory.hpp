@@ -6,6 +6,49 @@
 #include <deque>
 
 
+template <typename T>
+class DequeRangeData : public RangeData<T> {
+public:
+
+    inline DequeRangeData(std::deque<T>& data) :
+        _data(data) {}
+
+    virtual const bool init(T& value) {
+        _data_iterator = _data.begin();
+        if (_data_iterator != _data.end()) {
+            value = *_data_iterator;
+            return true;
+        }
+        return false;
+    }
+
+    virtual const bool next(T& value) {
+        ++_data_iterator;
+        if (_data_iterator != _data.end()) {
+            value = *_data_iterator;
+            return true;
+        }
+        return false;
+    }
+
+
+private:
+
+    std::deque<T>& _data;
+    typename std::deque<T>::iterator _data_iterator;
+
+};
+
+template <typename T>
+class DequeRange : public Range<T> {
+public:
+
+    inline DequeRange(std::deque<T>& data) :
+        Range<T>(new DequeRangeData<T>(data)) {}
+
+};
+
+
 class MemoryHistory : public History {
 public:
 
@@ -31,10 +74,14 @@ public:
         return result;
     }
 
-    template <typename Model>
-    const std::deque<Model>& get_all() {
-        static const std::deque<Model> empty_deque;
-        return empty_deque;
+    virtual Range<Trade> get_trades() {
+        return DequeRange<Trade>(_trades);
+    }
+    virtual Range<Order> get_orders() {
+        return DequeRange<Order>(_orders);
+    }
+    virtual Range<Decision> get_decisions() {
+        return DequeRange<Decision>(_decisions);
     }
 
     virtual Span get_time_span() {
@@ -61,7 +108,7 @@ protected:
 private:
 
     std::deque<Trade> _trades;
-    std::map<uint64_t, Trade> _trades_by_id;
+    std::multimap<uint64_t, Trade> _trades_by_id;
     std::multimap<double, Trade> _trades_by_timestamp;
     std::deque<Order> _orders;
     std::multimap<uint64_t, Order> _orders_by_id;
@@ -69,20 +116,6 @@ private:
     std::multimap<double, Decision> _decisions_by_timestamp;
 
 };
-
-
-template <>
-const std::deque<Trade>& MemoryHistory::get_all<Trade>() {
-    return _trades;
-}
-template <>
-const std::deque<Order>& MemoryHistory::get_all<Order>() {
-    return _orders;
-}
-template <>
-const std::deque<Decision>& MemoryHistory::get_all<Decision>() {
-    return _decisions;
-}
 
 
 #endif // CTRADING__HISTORY__MEMORYHISTORY__HPP

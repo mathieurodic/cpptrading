@@ -59,7 +59,7 @@ int main(int argc, char const *argv[]) {
     }
 
     printf("\nRetrieving range\n");
-    // auto range = btree.get_all();
+    // auto range = btree.get();
     // for (auto it=range.begin(); it!=range.end(); ++it) {
     //     std::cout << *it << '\n';
     // }
@@ -106,7 +106,7 @@ int main(int argc, char const *argv[]) {
                 btree.insert(test);
             }
         }
-        for (const auto& test : btree.get_all()) {
+        for (const auto& test : btree.get()) {
             std::cout << test << '\n';
         }
     }

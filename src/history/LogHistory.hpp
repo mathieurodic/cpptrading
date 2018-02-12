@@ -9,74 +9,50 @@
 #include <fstream>
 
 
-template <typename Model>
-class LogHistoryIterator : public Iterator<Model> {
+template <typename T>
+class LogHistoryRangeData : public RangeData<T> {
 public:
 
-    inline LogHistoryIterator(const LogHistoryIterator<Model>& source) :
-        _path(source._path),
-        _file(_path),
-        _position(source._position)
-    {
-        this->_is_finished = source._is_finished;
-        _file.seekg(_position);
-        this->_value = source._value;
-    }
-    inline LogHistoryIterator() {
-        this->_is_finished = true;
-    }
-    inline LogHistoryIterator(const std::string& path) :
-        _path(path),
-        _file(_path)
-    {
-        this->_is_finished = false;
-        next();
-    }
+    inline LogHistoryRangeData(const std::string& path) :
+        _file(path) {}
 
-    virtual void operator++() {
-        next();
+
+    virtual const bool init(T& value) {
+        return iterate(value);
+    }
+    virtual const bool next(T& value) {
+        return iterate(value);
     }
 
 private:
-    
-    inline bool next() {
+
+    inline const bool iterate(T& value) {
         std::string line;
+        bool must_continue;
         do {
-            this->_is_finished = !std::getline(_file, line);
-            _position = _file.tellg();
-        } while (!this->_is_finished && !this->_value.parse(line));
+            must_continue = (bool) std::getline(_file, line);
+        } while (must_continue && !value.parse(line));
+        return must_continue;
     }
 
     static const std::string _model_name;
     const std::string _path;
     std::ifstream _file;
-    size_t _position;
+
 };
 
-template <> const std::string LogHistoryIterator<Trade>::_model_name = "Trade";
-template <> const std::string LogHistoryIterator<Order>::_model_name = "Order";
-template <> const std::string LogHistoryIterator<Decision>::_model_name = "Decision";
+template <> const std::string LogHistoryRangeData<Trade>::_model_name = "Trade";
+template <> const std::string LogHistoryRangeData<Order>::_model_name = "Order";
+template <> const std::string LogHistoryRangeData<Decision>::_model_name = "Decision";
 
 
-template <typename Model>
-class LogHistoryRange : public Range<Model, LogHistoryIterator<Model>> {
+template <typename T>
+class LogHistoryRange : public Range<T> {
 public:
 
-    inline LogHistoryRange() :
-        _is_stdout(true)
-    {}
     inline LogHistoryRange(const std::string& path) :
-        _path(path),
-        _is_stdout(false)
-    {}
+        Range<T>(new LogHistoryRangeData<T>(path)) {}
 
-    inline LogHistoryIterator<Model> begin() {
-        return _is_stdout ? LogHistoryIterator<Model>() : LogHistoryIterator<Model>(_path);
-    }
-
-private:
-     const std::string _path;
-     const bool _is_stdout;
 };
 
 
@@ -105,15 +81,20 @@ public:
         _feed(decision);
     }
 
-    template <typename Model>
-    LogHistoryRange<Model> get_all() {
-        return _is_stdout ? LogHistoryRange<Model>() : LogHistoryRange<Model>(_path);
+    virtual Range<Trade> get_trades() {
+        return _is_stdout ? Range<Trade>() : LogHistoryRange<Trade>(_path);
+    }
+    virtual Range<Order> get_orders() {
+        return _is_stdout ? Range<Order>() : LogHistoryRange<Order>(_path);
+    }
+    virtual Range<Decision> get_decisions() {
+        return _is_stdout ? Range<Decision>() : LogHistoryRange<Decision>(_path);
     }
 
 private:
 
-    template <typename Model>
-    inline void _feed(Model& instance) {
+    template <typename T>
+    inline void _feed(T& instance) {
         (get_output() << instance << '\n').flush();
     }
 

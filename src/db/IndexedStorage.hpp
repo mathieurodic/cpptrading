@@ -42,8 +42,8 @@ public:
         return true;
     }
 
-    inline typename logger_t::template Range<record_t> get_all() {
-        return _logger_writer.template get_all<record_t>();
+    inline typename logger_t::template Range<record_t> get() {
+        return _logger_writer.template get<record_t>();
     }
 
 protected:
@@ -79,7 +79,7 @@ protected:
     INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_gt) \
     inline const bool contains_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.contains(searched_record); } \
     inline const size_t count_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.count(searched_record); } \
-    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get_all(); } \
+    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get(); } \
     inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_range(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
 
 #define INDEXED_STORAGE(CLASS, PROPERTY, LOGGER, INDEX) \

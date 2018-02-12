@@ -88,55 +88,34 @@ private:
 
 
 template <typename T>
-class RotatingLogIterator : public Iterator<T> {
+class RotatingLogRangeData : public RangeData<T> {
 public:
 
-    inline RotatingLogIterator() {
-        this->_is_finished = true;
-        _reader = NULL;
-    }
-    inline RotatingLogIterator(const std::string basepath) {
-        this->_is_finished = false;
-        _reader = new RotatingLogReader(basepath);
-        next();
-    }
-    inline ~RotatingLogIterator() {
-        if (_reader != NULL) {
-            delete _reader;
-            _reader = NULL;
-        }
+    RotatingLogRangeData(const std::string& basepath) :
+        _reader(basepath)
+        {
+
     }
 
-    virtual void operator++() {
-        next();
+    virtual const bool init(T& value) {
+        _reader.next(value);
+    }
+    virtual const bool next(T& value) {
+        _reader.next(value);
     }
 
 private:
 
-    inline void next() {
-        if (!this->_is_finished) {
-            this->_is_finished = ! _reader->next(this->_value);
-        }
-    }
-
-    RotatingLogReader* _reader;
+    RotatingLogReader _reader;
 
 };
 
-
 template <typename T>
-class RotatingLogRange : public Range<T, RotatingLogIterator<T>> {
+class RotatingLogRange : public Range<T> {
 public:
 
-    inline RotatingLogRange(const std::string& basepath) : _basepath(basepath) {}
-
-    RotatingLogIterator<T> begin() {
-        return RotatingLogIterator<T>(_basepath);
-    }
-
-private:
-
-    const std::string _basepath;
+    RotatingLogRange(const std::string& basepath) :
+        Range<T>(new RotatingLogRangeData<T>(basepath)) {}
 
 };
 
@@ -201,7 +180,7 @@ public:
     }
 
     template <typename T>
-    inline RotatingLogRange<T> get_all() {
+    inline RotatingLogRange<T> get() {
         return RotatingLogRange<T>(_basepath);
     }
 

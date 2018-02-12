@@ -46,10 +46,14 @@ public:
         return result;
     }
 
-    template <typename Model>
-    RotatingLogRange<Model> get_all() {
-        static const RotatingLogRange<Model> empty_range;
-        return empty_range;
+    virtual Range<Trade> get_trades() {
+        return _trades.get();
+    }
+    virtual Range<Order> get_orders() {
+        return _orders.get();
+    }
+    virtual Range<Decision> get_decisions() {
+        return _decisions.get();
     }
 
 protected:
@@ -63,20 +67,6 @@ private:
     INDEXED_STORAGE(Decision, decision_timestamp, RotatingLog, UpscaleBTree) _decisions;
 
 };
-
-
-template <>
-RotatingLogRange<Trade> DBHistory::get_all<Trade>() {
-    return _trades.get_all();
-}
-template <>
-RotatingLogRange<Order> DBHistory::get_all<Order>() {
-    return _orders.get_all();
-}
-template <>
-RotatingLogRange<Decision> DBHistory::get_all<Decision>() {
-    return _decisions.get_all();
-}
 
 
 #endif // CTRADING__HISTORY__DBHISTORY__HPP
