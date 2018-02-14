@@ -89,7 +89,7 @@ public:
         return _end_iterator;
     }
 
-    FilterRange<T> filter(bool (*filter)(const T&));
+    FilterRange<T> filter(std::function<bool(const T&)> filter);
 
     std::shared_ptr<RangeData<T>> _range_data;
     static const Iterator<T> _end_iterator;
@@ -104,7 +104,7 @@ template <typename T>
 class FilterRangeData : public RangeData<T> {
 public:
 
-    inline FilterRangeData(Range<T>& range, bool (*filter)(const T&)) :
+    inline FilterRangeData(Range<T>& range, std::function<bool(const T&)> filter) :
         _range_data(range._range_data),
         _filter(filter) {}
 
@@ -132,7 +132,7 @@ public:
 private:
     std::shared_ptr<RangeData<T>> _range_data;
     Iterator<T> _iterator;
-    bool (*_filter)(const T&);
+    std::function<bool(const T&)> _filter;
 };
 
 template <typename T>
@@ -142,14 +142,14 @@ public:
     FilterRange(const FilterRange<T>& source) :
         Range<T>(source) {}
 
-    FilterRange(Range<T>& range, bool (*filter)(const T&)) :
+    FilterRange(Range<T>& range, std::function<bool(const T&)> filter) :
         Range<T>(new FilterRangeData<T>(range, filter)) {}
 
 };
 
 
 template <typename T>
-FilterRange<T> Range<T>::filter(bool (*filter)(const T&)) {
+FilterRange<T> Range<T>::filter(std::function<bool(const T&)> filter) {
     return FilterRange<T>(*this, filter);
 }
 
