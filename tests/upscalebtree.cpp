@@ -36,7 +36,7 @@ int main(int argc, char const *argv[]) {
 
     printf("\nInstanciating tests\n");
     std::vector<test_t> tests;
-    for (int i=0; i<(1<<17); ++i) {
+    for (int i=0; i<(1<<12); ++i) {
         tests.push_back({
             .a = i,
             .b = i,
@@ -50,20 +50,23 @@ int main(int argc, char const *argv[]) {
         btree.insert(test);
     }
 
+    printf("\nShowing ]2, 12]\n");
+    std::cout << btree.get(2, 12) << '\n';
+
     printf("\nRetrieving points\n");
     for (test_t& test : tests) {
-        const test_t t = btree.get(test.c);
-        if (t != test) {
+        auto it = btree.get(test.c);
+        if (it.begin() == it.end()) {
             std::cout << "MISMATCH" << '\n';
         }
     }
 
     printf("\nRetrieving range\n");
-    // auto range = btree.get();
-    // for (auto it=range.begin(); it!=range.end(); ++it) {
-    //     std::cout << *it << '\n';
-    // }
-    for (const auto& test : btree.get_range(9, 12)) {
+    auto range = btree.get();
+    for (auto it=range.begin(); it!=range.end(); ++it) {
+        std::cout << *it << '\n';
+    }
+    for (auto test : btree.get(9, 12)) {
         std::cout << test << '\n';
     }
 
@@ -82,8 +85,8 @@ int main(int argc, char const *argv[]) {
     }
 
     printf("\nRetrieving non-existing keys\n");
-    std::cout << btree.get_ge(-1.0) << '\n';
-    std::cout << btree.get_le(1e9) << '\n';
+    std::cout << btree.get(-1.0) << '\n';
+    std::cout << btree.get(1e9) << '\n';
     try {
         std::cout << btree.get(-1.0) << '\n';
     } catch (const DBKeyException& exception) {

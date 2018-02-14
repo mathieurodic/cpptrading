@@ -57,6 +57,8 @@ class SortedRange : public Range<T> {
 public:
     SortedRange(Container& container) :
         Range<T>(new SortedRangeData<Container, Key, T>(container)) {}
+    SortedRange(Container& container, const Key& target) :
+        Range<T>(new SortedRangeData<Container, Key, T>(container, target, target)) {}
     SortedRange(Container& container, const Key& begin, const Key& end) :
         Range<T>(new SortedRangeData<Container, Key, T>(container, begin, end)) {}
 };

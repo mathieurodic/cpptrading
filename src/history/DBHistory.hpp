@@ -40,7 +40,7 @@ public:
 
     virtual TradeAverage get_average(const double& timestamp_begin, const double& timestamp_end) {
         TradeAverage result;
-        for (const Trade& trade : _trades.get_timestamp_range(timestamp_begin, timestamp_end)) {
+        for (const Trade& trade : _trades.get_by_timestamp(timestamp_begin, timestamp_end)) {
             result += trade;
         }
         return result;

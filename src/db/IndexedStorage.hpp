@@ -68,19 +68,11 @@ protected:
 #endif // offsetofproperty
 
 
-#define INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, METHOD) \
-    inline const RECORD_TYPE METHOD##_by_##PROPERTY(KEY_TYPE& key) { return _index_##PROPERTY.METHOD(key); }
-
 #define INDEXED_STORAGE_GETTERS(PROPERTY, KEY_TYPE, RECORD_TYPE) \
-    INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get) \
-    INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_le) \
-    INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_lt) \
-    INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_ge) \
-    INDEXED_STORAGE_GETTER(PROPERTY, KEY_TYPE, RECORD_TYPE, get_gt) \
+    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get##_by_##PROPERTY(KEY_TYPE& key) { return _index_##PROPERTY.get(key); } \
+    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get##_by_##PROPERTY(KEY_TYPE& key_begin, KEY_TYPE& key_end) { return _index_##PROPERTY.get(key_begin, key_end); } \
     inline const bool contains_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.contains(searched_record); } \
     inline const size_t count_##PROPERTY(RECORD_TYPE& searched_record) { return _index_##PROPERTY.count(searched_record); } \
-    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_all() { return _index_##PROPERTY.get(); } \
-    inline UpscaleBTreeRange<KEY_TYPE, RECORD_TYPE> get_##PROPERTY##_range(KEY_TYPE key_begin, KEY_TYPE key_end) { return _index_##PROPERTY.get_range(key_begin, key_end); } \
 
 #define INDEXED_STORAGE(CLASS, PROPERTY, LOGGER, INDEX) \
     class IndexedStorage##__##CLASS##_##PROPERTY : public IndexedStorage<CLASS, LOGGER> { \
