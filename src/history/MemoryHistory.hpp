@@ -5,48 +5,7 @@
 #include <map>
 #include <deque>
 
-
-template <typename T>
-class DequeRangeData : public RangeData<T> {
-public:
-
-    inline DequeRangeData(std::deque<T>& data) :
-        _data(data) {}
-
-    virtual const bool init(T& value) {
-        _data_iterator = _data.begin();
-        if (_data_iterator != _data.end()) {
-            value = *_data_iterator;
-            return true;
-        }
-        return false;
-    }
-
-    virtual const bool next(T& value) {
-        ++_data_iterator;
-        if (_data_iterator != _data.end()) {
-            value = *_data_iterator;
-            return true;
-        }
-        return false;
-    }
-
-
-private:
-
-    std::deque<T>& _data;
-    typename std::deque<T>::iterator _data_iterator;
-
-};
-
-template <typename T>
-class DequeRange : public Range<T> {
-public:
-
-    inline DequeRange(std::deque<T>& data) :
-        Range<T>(new DequeRangeData<T>(data)) {}
-
-};
+#include "range/ForwardRange.hpp"
 
 
 class MemoryHistory : public History {
@@ -75,13 +34,13 @@ public:
     }
 
     virtual Range<Trade> get_trades() {
-        return DequeRange<Trade>(_trades);
+        return ForwardRangeFactory(_trades);
     }
     virtual Range<Order> get_orders() {
-        return DequeRange<Order>(_orders);
+        return ForwardRangeFactory(_orders);
     }
     virtual Range<Decision> get_decisions() {
-        return DequeRange<Decision>(_decisions);
+        return ForwardRangeFactory(_decisions);
     }
 
     virtual Span get_time_span() {

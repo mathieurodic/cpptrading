@@ -1,5 +1,5 @@
-#ifndef CPPTRADING__RANGE__ASSOCIATIVERANGE_HPP
-#define CPPTRADING__RANGE__ASSOCIATIVERANGE_HPP
+#ifndef CPPTRADING__RANGE__SORTEDRANGE_HPP
+#define CPPTRADING__RANGE__SORTEDRANGE_HPP
 
 
 #include "./Range.hpp"
@@ -19,23 +19,23 @@ public:
         _begin(begin),
         _end(end) {}
 
-    virtual const bool init(T& value) {
+    virtual const bool init(T*& value) {
         if (_is_bounded) {
             _container_iterator = _container.upper_bound(_begin);
         } else {
             _container_iterator = _container.begin();
         }
         if (_container_iterator != _container.end()) {
-            value = _container_iterator->second;
+            value = & (_container_iterator->second);
             return true;
         }
         return false;
     }
 
-    virtual const bool next(T& value) {
+    virtual const bool next(T*& value) {
         ++_container_iterator;
         if (_container_iterator != _container.end() && (!_is_bounded || _container_iterator->first <= _end)) {
-            value = _container_iterator->second;
+            value = & (_container_iterator->second);
             return true;
         }
         return false;
@@ -72,4 +72,4 @@ SortedRange<Container> SortedRangeFactory(Container& container, const BeginKey& 
 };
 
 
-#endif // CPPTRADING__RANGE__ASSOCIATIVERANGE_HPP
+#endif // CPPTRADING__RANGE__SORTEDRANGE_HPP

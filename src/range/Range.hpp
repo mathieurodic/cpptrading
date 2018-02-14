@@ -12,8 +12,8 @@ public:
 
     virtual ~RangeData() {}
 
-    virtual const bool init(T& value) = 0;
-    virtual const bool next(T& value) = 0;
+    virtual const bool init(T*& value) = 0;
+    virtual const bool next(T*& value) = 0;
 
 };
 
@@ -23,6 +23,7 @@ class Iterator {
 public:
 
     inline Iterator() :
+        _value(NULL),
         _is_finished(true) {}
     inline Iterator(std::shared_ptr<RangeData<T>> range_data) :
         _range_data(range_data),
@@ -35,7 +36,7 @@ public:
     }
 
     inline const T& operator * () const {
-        return _value;
+        return * _value;
     }
 
     template <typename OtherItem>
@@ -51,7 +52,7 @@ private:
 
     bool _is_finished;
     std::shared_ptr<RangeData<T>> _range_data;
-    T _value;
+    T* _value;
 
 };
 
@@ -108,20 +109,20 @@ public:
         _range_data(range._range_data),
         _filter(filter) {}
 
-    virtual const bool init(T& value) {
+    virtual const bool init(T*& value) {
         bool result = _range_data->init(value);
         while (result) {
-            if (_filter(value)) {
+            if (_filter(*value)) {
                 return true;
             }
             result = _range_data->next(value);
         }
         return false;
     }
-    virtual const bool next(T& value) {
+    virtual const bool next(T*& value) {
         bool result = _range_data->next(value);
         while (result) {
-            if (_filter(value)) {
+            if (_filter(*value)) {
                 return true;
             }
             result = _range_data->next(value);

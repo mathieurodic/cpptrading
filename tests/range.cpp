@@ -1,15 +1,18 @@
-#include "range/SortedRange.hpp"
-
-
 #include <iostream>
+
+#include "range/SortedRange.hpp"
+#include "range/ForwardRange.hpp"
+
 #include <map>
+#include <list>
 
 
-#define map_type std::multimap
+#define Associative std::multimap
+#define Forward std::list
 
 
 int main(int argc, char *argv[]) {
-    map_type<std::string, int> map;
+    Associative<std::string, int> map;
     for (int i=0; i<100; ++i) {
         map.insert({std::to_string(i), i});
     }
@@ -53,5 +56,18 @@ int main(int argc, char *argv[]) {
         std::cout << i << '\n';
     }
     std::cout << "\nShowed chained ranges (even, divisible by 3)\n\n";
+
+    std::cout << "\n\nTESTED ASSOCIATIVE\n\n" << '\n';
+
+
+    Forward<std::string> forward;
+    for (int i=1001; i<=1111; ++i) {
+        forward.push_back(std::to_string(i));
+    }
+    for (const std::string& s : ForwardRangeFactory(forward)) {
+        std::cout << s << '\n';
+    }
+    std::cout << "\nShowed full range\n\n";
+    std::cout << "\n\nTESTED FORWARD\n\n" << '\n';
     return 0;
 }

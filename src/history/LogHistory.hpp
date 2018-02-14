@@ -17,11 +17,11 @@ public:
         _file(path) {}
 
 
-    virtual const bool init(T& value) {
-        return iterate(value);
+    virtual const bool init(T*& value) {
+        return iterate(*value);
     }
-    virtual const bool next(T& value) {
-        return iterate(value);
+    virtual const bool next(T*& value) {
+        return iterate(*value);
     }
 
 private:

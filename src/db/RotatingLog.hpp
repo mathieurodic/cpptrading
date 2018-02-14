@@ -97,16 +97,18 @@ public:
 
     }
 
-    virtual const bool init(T& value) {
-        _reader.next(value);
+    virtual const bool init(T*& value) {
+        value = & _value;
+        _reader.next(_value);
     }
-    virtual const bool next(T& value) {
-        _reader.next(value);
+    virtual const bool next(T*& value) {
+        _reader.next(_value);
     }
 
 private:
 
     RotatingLogReader _reader;
+    T _value;
 
 };
 
