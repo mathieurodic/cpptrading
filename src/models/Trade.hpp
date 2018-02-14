@@ -15,8 +15,19 @@
 
 struct Trade {
 
+    inline Trade() :
+        id(0),
+        volume(NAN),
+        price(NAN),
+        type(UNDEFINED),
+        buy_order_id(0),
+        sell_order_id(0) {}
+
     inline const bool operator==(const Trade& other) const {
         return memcmp(this, &other, sizeof(*this)) == 0;
+    }
+    inline const bool operator < (const Trade& other) const {
+        return memcmp(this, &other, sizeof(*this)) < 0;
     }
 
     inline const bool parse(const std::string& source) {

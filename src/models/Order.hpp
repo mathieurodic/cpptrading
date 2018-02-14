@@ -13,6 +13,7 @@
 struct Order {
 
     inline const bool operator==(const Order& other) const { return memcmp(this, &other, sizeof(*this)) == 0; }
+    inline const bool operator<(const Order& other) const { return memcmp(this, &other, sizeof(*this)) < 0; }
     inline const bool parse(const std::string& source) {
         return false;
     }

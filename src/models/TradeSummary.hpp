@@ -30,20 +30,17 @@ struct TradeSummaryPart {
 struct TradeSummary {
     inline const bool operator==(const TradeSummary& other) { return memcmp(this, &other, sizeof(*this)) == 0; }
     inline TradeSummary() :
-        spread(NAN),
-        timestamp_begin(NAN),
-        timestamp_end(NAN) {}
-    Timestamp timestamp_begin;
-    Timestamp timestamp_end;
+        spread(NAN) {}
+    TimestampSpan timestamp_span;
     TradeSummaryPart buys;
     TradeSummaryPart sells;
     double spread;
     inline void operator += (const Trade& trade) {
-        if (std::isnan(*timestamp_begin) || trade.timestamp < timestamp_begin) {
-            timestamp_begin = trade.timestamp;
+        if (std::isnan(*timestamp_span.from) || trade.timestamp < timestamp_span.from) {
+            timestamp_span.from = trade.timestamp;
         }
-        if (std::isnan(*timestamp_end) || trade.timestamp > timestamp_end) {
-            timestamp_end = trade.timestamp;
+        if (std::isnan(*timestamp_span.to) || trade.timestamp > timestamp_span.to) {
+            timestamp_span.to = trade.timestamp;
         }
         switch (trade.type) {
             case BUY:
@@ -76,8 +73,8 @@ inline std::ostream& operator << (std::ostream& os, const TradeSummaryPart trade
 inline std::ostream& operator << (std::ostream& os, const TradeSummary trade_summary) {
     return (os
         << "<TradeSummary"
-        << " timestamp_begin=" << trade_summary.timestamp_begin
-        << " timestamp_end=" << trade_summary.timestamp_end
+        << " from=" << trade_summary.timestamp_span.from
+        << " to=" << trade_summary.timestamp_span.to
         << " buys=" << trade_summary.buys
         << " sells=" << trade_summary.sells
         << " spread=" << trade_summary.spread

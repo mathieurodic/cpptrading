@@ -101,7 +101,6 @@ public:
                     UPS_CURSOR_FIRST
                 );
             } else {
-                std::cout << _key << '\n';
                 UPS_SAFE_CALL(ups_cursor_find,
                     _ups_cursor,
                     &_ups_key,
@@ -475,6 +474,36 @@ public:
             ups_cursor
         );
         return count;
+    }
+
+    inline const key_t get_extremum_key(const bool is_lowest) {
+        key_t key;
+        record_t record;
+        ups_key_t ups_key = {.size=sizeof(key_t), .data=&key, .flags=UPS_RECORD_USER_ALLOC};
+        ups_record_t ups_record = {.size=sizeof(record_t), .data=&record, .flags=UPS_RECORD_USER_ALLOC};
+        ups_cursor_t* ups_cursor;
+        UPS_SAFE_CALL(ups_cursor_create,
+            &ups_cursor,
+            _ups_db,
+            _ups_read_txn, // transaction
+            0 // flags (unused)
+        );
+        UPS_SAFE_CALL(ups_cursor_move,
+            ups_cursor,
+            &ups_key,
+            &ups_record,
+            is_lowest ? UPS_CURSOR_FIRST : UPS_CURSOR_LAST
+        );
+        UPS_SAFE_CALL(ups_cursor_close,
+            ups_cursor
+        );
+        return key;
+    }
+    inline const key_t get_lowest_key() {
+        return get_extremum_key(true);
+    }
+    inline const key_t get_highest_key() {
+        return get_extremum_key(false);
     }
 
 protected:

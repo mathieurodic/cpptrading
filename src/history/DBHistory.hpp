@@ -9,7 +9,7 @@
 #include <thread>
 #include <cmath>
 
-#include "db/RotatingLog.hpp"
+#include "db/PlainLog.hpp"
 #include "db/UpscaleBTree.hpp"
 
 #include "IO/directories.hpp"
@@ -63,6 +63,21 @@ public:
         return _decisions.get<Decision>();
     }
 
+    virtual TimestampSpan get_time_span() {
+        TimestampSpan span;
+        try {
+            span.from = _trades_by_timestamp.get_lowest_key();
+        } catch (const UpscaleDBException& exception) {
+            span.from = NAN;
+        }
+        try {
+            span.to = _trades_by_timestamp.get_highest_key();
+        } catch (const UpscaleDBException& exception) {
+            span.to = NAN;
+        }
+        return span;
+    }
+
 protected:
 
     const std::string _basepath;
@@ -70,10 +85,10 @@ protected:
 private:
 
     bool _basepath_is_initialized;
-    RotatingLogWriter _trades;
+    PlainLogWriter _trades;
     UpscaleBTree<Timestamp, Trade> _trades_by_timestamp;
-    RotatingLogWriter _orders;
-    RotatingLogWriter _decisions;
+    PlainLogWriter _orders;
+    PlainLogWriter _decisions;
 
 };
 

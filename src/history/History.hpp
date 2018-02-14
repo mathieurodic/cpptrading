@@ -2,6 +2,7 @@
 #define CTRADING__HISTORY__HISTORY__HPP
 
 
+#include "models/Timestamp.hpp"
 #include "models/Trade.hpp"
 #include "models/TradeSummary.hpp"
 #include "models/Order.hpp"
@@ -9,22 +10,8 @@
 
 #include "range/Range.hpp"
 
-#include <unordered_set>
+#include <set>
 #include <ostream>
-
-
-struct Span {
-    double min;
-    double max;
-    void operator += (const double& value) {
-        min += value;
-        max += value;
-    }
-    void operator -= (const double& value) {
-        min -= value;
-        max -= value;
-    }
-};
 
 
 struct SynchronizationResult {
@@ -72,25 +59,20 @@ public:
     virtual Range<Order> get_orders() = 0;
     virtual Range<Decision> get_decisions() = 0;
 
-    virtual Span get_time_span() {
-        return {
-            .min = NAN,
-            .max = NAN,
-        };
+    virtual TimestampSpan get_time_span() {
+        return {};
     }
 
     template <typename T>
     inline const std::pair<size_t, size_t> synchronize_with(History& history_2) {
         History& history_1 = *this;
-        std::unordered_set<T> specific_instances_1;
+        std::set<T> specific_instances_1;
         for (const T& instance : history_1.template get<T>()) {
-            // std::cout << "THIS: " << instance << '\n';
             specific_instances_1.insert(instance);
         }
         //
-        std::unordered_set<T> specific_instances_2;
+        std::set<T> specific_instances_2;
         for (const T& instance : history_2.template get<T>()) {
-            // std::cout << "OTHER: " << instance << '\n';
             auto it = specific_instances_1.find(instance);
             if (it == specific_instances_1.end()) {
                 specific_instances_2.insert(instance);
@@ -131,50 +113,6 @@ Range<Order> History::get() {
 template <>
 Range<Decision> History::get() {
     return get_decisions();
-}
-
-
-template <typename T, typename History1, typename History2,
-    typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
-    typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
-inline std::pair<size_t, size_t> synchronize(History1& history_1, History2& history_2) {
-    std::unordered_set<T> specific_instances_1;
-    for (const T& instance : history_1.template get<T>()) {
-        // std::cout << "THIS: " << instance << '\n';
-        specific_instances_1.insert(instance);
-    }
-    //
-    std::unordered_set<T> specific_instances_2;
-    for (const T& instance : history_2.template get<T>()) {
-        // std::cout << "OTHER: " << instance << '\n';
-        auto it = specific_instances_1.find(instance);
-        if (it == specific_instances_1.end()) {
-            specific_instances_2.insert(instance);
-        } else {
-            specific_instances_1.erase(it);
-        }
-    }
-    //
-    for (T instance : specific_instances_1) {
-        history_2.feed(instance);
-    }
-    for (T instance : specific_instances_2) {
-        history_1.feed(instance);
-    }
-    //
-    return {specific_instances_1.size(), specific_instances_2.size()};
-}
-
-
-template <typename History1, typename History2,
-    typename std::enable_if<std::is_base_of<History, History1>::value, History>::type* = nullptr,
-    typename std::enable_if<std::is_base_of<History, History2>::value, History>::type* = nullptr>
-inline const SynchronizationResult synchronize(History1& history_1, History2& history_2) {
-    SynchronizationResult result;
-    result.trades = synchronize<Trade>(history_1, history_2);
-    result.orders = synchronize<Order>(history_1, history_2);
-    result.decisions = synchronize<Decision>(history_1, history_2);
-    return result;
 }
 
 

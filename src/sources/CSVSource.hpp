@@ -24,7 +24,7 @@ public:
         }
         size_t count = 0;
         while (++count <= limit) {
-            Trade trade = {0};
+            Trade trade;
             const int result = fscanf(file, "%lf,%lf,%lf\n", &*trade.timestamp, &trade.price, &trade.volume);
             if (result == EOF || result != 3) {
                 break;

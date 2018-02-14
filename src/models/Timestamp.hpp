@@ -109,6 +109,23 @@ private:
 
 };
 
+
+struct TimestampSpan {
+    inline TimestampSpan(const Timestamp& _from=NAN, const Timestamp _to=NAN) : from(_from), to(_to) {}
+    void operator += (const double& value) {
+        from += value;
+        to += value;
+    }
+    void operator -= (const double& value) {
+        from -= value;
+        to -= value;
+    }
+
+    Timestamp from;
+    Timestamp to;
+};
+
+
 #pragma pack(pop)
 
 
@@ -118,6 +135,14 @@ private:
 
 inline std::ostream& operator << (std::ostream& os, const Timestamp& timestamp) {
     return (os << std::string(timestamp));
+}
+inline std::ostream& operator << (std::ostream& os, const TimestampSpan& timestamp_span) {
+    return (os
+        << "<TimestampSpan"
+        << " from=" << timestamp_span.from
+        << " to=" << timestamp_span.to
+        << ">"
+    );
 }
 
 

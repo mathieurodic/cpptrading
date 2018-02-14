@@ -38,21 +38,21 @@ public:
         return SortedRangeFactory(_trades_by_timestamp, timestamp_begin, timestamp_end);
     }
 
-    virtual Span get_time_span() {
-        Span span;
+    virtual TimestampSpan get_time_span() {
+        TimestampSpan timestamp_span;
         {
-            auto it = _trades_by_timestamp.begin();
+            const auto it = _trades_by_timestamp.begin();
             if (it != _trades_by_timestamp.end()) {
-                span.min = it->first;
+                timestamp_span.from = it->first;
             }
         }
         {
-            auto it = _trades_by_timestamp.rbegin();
+            const auto it = _trades_by_timestamp.rbegin();
             if (it != _trades_by_timestamp.rend()) {
-                span.max = it->first;
+                timestamp_span.to = it->first;
             }
         }
-        return span;
+        return timestamp_span;
     }
 
 protected:
