@@ -48,6 +48,25 @@ public:
         return _value;
     }
 
+    inline const bool operator < (const Timestamp& other) const {
+        return _value < other._value;
+    }
+    inline const bool operator <= (const Timestamp& other) const {
+        return _value <= other._value;
+    }
+    inline const bool operator > (const Timestamp& other) const {
+        return _value > other._value;
+    }
+    inline const bool operator >= (const Timestamp& other) const {
+        return _value >= other._value;
+    }
+    inline const bool operator != (const Timestamp& other) const {
+        return _value != other._value;
+    }
+    inline const bool operator == (const Timestamp& other) const {
+        return _value == other._value;
+    }
+
     template <typename Numeric, typename std::enable_if<std::is_convertible<Numeric, double>::value>::type* = nullptr>
     inline Timestamp operator + (const Numeric& other) {
         return Timestamp(_value + other);
