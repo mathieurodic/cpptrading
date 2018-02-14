@@ -7,7 +7,7 @@
 #include "models/Order.hpp"
 #include "models/Decision.hpp"
 
-#include "iteration.hpp"
+#include "range/Range.hpp"
 
 #include <unordered_set>
 #include <ostream>
@@ -60,6 +60,7 @@ public:
     }
 
     virtual Range<Trade> get_trades() = 0;
+
     virtual Range<Order> get_orders() = 0;
     virtual Range<Decision> get_decisions() = 0;
 

@@ -1,5 +1,5 @@
-#ifndef CPPTRADING__ITERATION_HPP
-#define CPPTRADING__ITERATION_HPP
+#ifndef CPPTRADING__RANGE__RANGE_HPP
+#define CPPTRADING__RANGE__RANGE_HPP
 
 
 #include <stdlib.h>
@@ -154,4 +154,4 @@ FilterRange<T> Range<T>::filter(std::function<bool(const T&)> filter) {
 }
 
 
-#endif // CPPTRADING__ITERATION_HPP
+#endif // CPPTRADING__RANGE__RANGE_HPP

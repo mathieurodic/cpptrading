@@ -11,7 +11,7 @@
 #include <set>
 
 #include "exceptions/Exception.hpp"
-#include "iteration.hpp"
+#include "range/Range.hpp"
 
 
 class RotatingLogReader {
