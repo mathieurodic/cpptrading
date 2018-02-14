@@ -7,9 +7,9 @@ OUTPUT_PATH="${OUTPUT_PATH%.*}"
 OUTPUT_DIR="$(dirname "${OUTPUT_PATH}")"
 
 if [ "${DEBUG}" = true ] ; then
-    EXECUTION_COMMAND="valgrind ./${OUTPUT_PATH}"
+    EXECUTION_PRECOMMAND="valgrind"
 else
-    EXECUTION_COMMAND="time ./${OUTPUT_PATH}"
+    EXECUTION_PRECOMMAND=""
 fi
 
 if [ "${DEBUG}" = true ] ; then
@@ -22,5 +22,5 @@ mkdir -p "${OUTPUT_DIR}"
 time g++ ${OPTIONS} --short-enums -fdiagnostics-color=always -std=c++17 -Isrc "${INPUT_PATH}" \
     -Wno-write-strings  -Wno-narrowing -Wno-trigraphs \
     -lpthread -lupscaledb -lstdc++fs -lz -lwebsockets -lcurl -ltbb -lncursesw \
-    -o "${OUTPUT_PATH}" && echo && ${EXECUTION_COMMAND}
+    -o "${OUTPUT_PATH}" && echo && time ${EXECUTION_PRECOMMAND} ./${OUTPUT_PATH}
 exit $?
