@@ -94,5 +94,31 @@ int main(int argc, char const *argv[]) {
         std::cout << i << '\n';
     }
     std::cout << "\nShowed limited range from copy (1-2)\n\n";
+    auto filtered_range = range.filter([] (const int& input) -> bool {
+        return input % 2 == 0;
+    });
+    for (const int& i : filtered_range) {
+        std::cout << i << '\n';
+    }
+    std::cout << "\nShowed filtered range from copy (even)\n\n";
+    filtered_range = range.filter([] (const int& input) -> bool {
+        return input % 2 == 0;
+    });
+    auto filtered_range_2 = filtered_range.filter([] (const int& input) -> bool {
+        return input % 3 == 0;
+    });
+    for (const int& i : filtered_range_2) {
+        std::cout << i << '\n';
+    }
+    std::cout << "\nShowed filtered range from copy (even, divisible by 3)\n\n";
+    filtered_range = range.filter([] (const int& input) -> bool {
+        return input % 2 == 0;
+    }).filter([] (const int& input) -> bool {
+        return input % 3 == 0;
+    });
+    for (const int& i : filtered_range_2) {
+        std::cout << i << '\n';
+    }
+    std::cout << "\nShowed chained ranges (even, divisible by 3)\n\n";
     return 0;
 }
