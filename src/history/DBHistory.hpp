@@ -9,11 +9,10 @@
 #include <thread>
 #include <cmath>
 
-#include <tbb/concurrent_hash_map.h>
-
-#include "db/IndexedStorage.hpp"
 #include "db/RotatingLog.hpp"
 #include "db/UpscaleBTree.hpp"
+
+#include "IO/directories.hpp"
 
 #include "./History.hpp"
 
@@ -23,37 +22,45 @@ public:
 
     inline DBHistory(const std::string& basepath) :
         _basepath(basepath),
+        _basepath_is_initialized(init_directory(_basepath)),
         _trades(basepath + "/trades"),
+        _trades_by_timestamp(basepath + "/trades_by_timestamp"),
         _orders(basepath + "/orders"),
         _decisions(basepath + "/decisions")
     {}
 
-    virtual void feed(Trade& trade) {
-        _trades.insert(trade);
-    }
-    virtual void feed(Order& order) {
-        _orders.insert(order);
-    }
-    virtual void feed(Decision& decision) {
-        _decisions.insert(decision);
+    inline bool init_directory(const std::string& path) {
+        try {
+            make_directory(path);
+            return true;
+        } catch (const std::exception&) {
+            return false;
+        }
     }
 
-    virtual TradeAverage get_average(const double& timestamp_begin, const double& timestamp_end) {
-        TradeAverage result;
-        for (const Trade& trade : _trades.get_by_timestamp(timestamp_begin, timestamp_end)) {
-            result += trade;
-        }
-        return result;
+    virtual void feed(Trade& trade) {
+        _trades.append(trade);
+        _trades_by_timestamp.insert(trade.timestamp, trade);
+    }
+    virtual void feed(Order& order) {
+        _orders.append(order);
+    }
+    virtual void feed(Decision& decision) {
+        _decisions.append(decision);
+    }
+
+    virtual Range<Trade> get_trades_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
+        return _trades_by_timestamp.get(timestamp_begin, timestamp_end);
     }
 
     virtual Range<Trade> get_trades() {
-        return _trades.get();
+        return _trades.get<Trade>();
     }
     virtual Range<Order> get_orders() {
-        return _orders.get();
+        return _orders.get<Order>();
     }
     virtual Range<Decision> get_decisions() {
-        return _decisions.get();
+        return _decisions.get<Decision>();
     }
 
 protected:
@@ -62,9 +69,11 @@ protected:
 
 private:
 
-    INDEXED_STORAGE_2(Trade, id, timestamp, RotatingLog, UpscaleBTree) _trades;
-    INDEXED_STORAGE(Order, id, RotatingLog, UpscaleBTree) _orders;
-    INDEXED_STORAGE(Decision, decision_timestamp, RotatingLog, UpscaleBTree) _decisions;
+    bool _basepath_is_initialized;
+    RotatingLogWriter _trades;
+    UpscaleBTree<Timestamp, Trade> _trades_by_timestamp;
+    RotatingLogWriter _orders;
+    RotatingLogWriter _decisions;
 
 };
 

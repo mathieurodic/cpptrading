@@ -15,6 +15,8 @@
 class Timestamp {
 public:
 
+    inline Timestamp(struct tm& t) :
+        _value(mktime(&t)) {}
     inline Timestamp(int32_t year, uint8_t month=1, uint8_t day=1, uint8_t hours=0, uint8_t minutes=0, double seconds=0.) {
         struct tm t;
         t.tm_sec = seconds;
@@ -41,6 +43,9 @@ public:
     inline Timestamp(const Timestamp& source)
         : _value(source._value) {}
 
+    inline double& operator * () {
+        return _value;
+    }
     inline operator const double& () const {
         return _value;
     }

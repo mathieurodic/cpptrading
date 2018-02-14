@@ -3,7 +3,7 @@
 
 
 #include "models/Trade.hpp"
-#include "models/TradeAverage.hpp"
+#include "models/TradeSummary.hpp"
 #include "models/Order.hpp"
 #include "models/Decision.hpp"
 
@@ -50,16 +50,24 @@ public:
     virtual void feed(Order& order) = 0;
     virtual void feed(Decision& decision) = 0;
 
-    virtual TradeAverage get_average(const double& timestamp_begin, const double timestamp_end) {
-        return TradeAverage();
-    }
-
     template <typename T>
     inline Range<T> get() {
         return Range<T>();
     }
 
     virtual Range<Trade> get_trades() = 0;
+    virtual Range<Trade> get_trades_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
+        return get_trades().filter([timestamp_begin, timestamp_end] (const Trade& trade) -> bool {
+            return trade.timestamp > timestamp_begin && trade.timestamp <= timestamp_end;
+        });
+    }
+    virtual TradeSummary get_trade_summary(const double& timestamp_begin, const double timestamp_end) {
+        TradeSummary summary;
+        for (const Trade& trade : get_trades_by_timestamp(timestamp_begin, timestamp_end)) {
+            summary += trade;
+        }
+        return summary;
+    }
 
     virtual Range<Order> get_orders() = 0;
     virtual Range<Decision> get_decisions() = 0;

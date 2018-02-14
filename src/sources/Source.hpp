@@ -87,7 +87,7 @@ public:
 protected:
 
     const std::string _currency_pair;
-    double _last_timestamp;
+    Timestamp _last_timestamp;
 
 private:
 

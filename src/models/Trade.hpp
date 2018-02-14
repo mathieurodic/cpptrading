@@ -37,7 +37,7 @@ struct Trade {
         }
         t.tm_year = year - 1900;
         t.tm_mon -= 1;
-        timestamp = mktime(&t);
+        timestamp = t;
         switch (tmp_type[0]) {
             case 'W':
                 type = WAIT;
@@ -54,11 +54,22 @@ struct Trade {
         return true;
     }
 
+    inline const Trade operator * (const double& factor) const {
+        Trade trade = *this;
+        trade.volume *= factor;
+        return trade;
+    }
+    inline const Trade operator / (const double& factor) const {
+        Trade trade = *this;
+        trade.volume /= factor;
+        return trade;
+    }
+
     uint64_t id;
     double volume;
     double price;
     ActionType type;
-    double timestamp;
+    Timestamp timestamp;
     uint64_t buy_order_id;
     uint64_t sell_order_id;
 };

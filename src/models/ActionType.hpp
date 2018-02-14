@@ -6,6 +6,7 @@ enum ActionType {
     BUY = +1,
     BID = +1,
     WAIT = 0,
+    UNDEFINED = 0,
     SELL = -1,
     ASK = -1,
 };

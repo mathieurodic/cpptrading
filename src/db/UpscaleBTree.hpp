@@ -11,6 +11,7 @@
 #include <ups/upscaledb.h>
 
 #include "exceptions/Exception.hpp"
+#include "models/Timestamp.hpp"
 #include "IO/directories.hpp"
 #include "range/Range.hpp"
 
@@ -100,6 +101,7 @@ public:
                     UPS_CURSOR_FIRST
                 );
             } else {
+                std::cout << _key << '\n';
                 UPS_SAFE_CALL(ups_cursor_find,
                     _ups_cursor,
                     &_ups_key,
@@ -169,7 +171,7 @@ public:
 };
 
 
-template <typename key_t, size_t key_offset, typename record_t>
+template <typename key_t, typename record_t>
 class UpscaleBTree {
 public:
 
@@ -182,21 +184,34 @@ public:
         // create directory
         make_directory(extract_directory(path));
         // create environment
-        static const ups_parameter_t ups_env_parameters[] = {
+        ups_parameter_t ups_env_parameters[] = {
             {UPS_PARAM_CACHE_SIZE, _cache_size},
-            {UPS_PARAM_PAGE_SIZE, 4096},
-            // {UPS_PARAM_JOURNAL_COMPRESSION, UPS_COMPRESSOR_SNAPPY},
-            {0, 0}
+            {0, 0},
+            {0, 0},
         };
-        UPS_SAFE_CALL(ups_env_create,
-            &_ups_env,
-            _path.c_str(),
-            UPS_AUTO_RECOVERY | UPS_ENABLE_TRANSACTIONS | (_autocommit ? UPS_ENABLE_FSYNC : 0),
-            0644,
-            ups_env_parameters
-        );
+        try {
+            UPS_SAFE_CALL(ups_env_open,
+                &_ups_env,
+                _path.c_str(),
+                UPS_AUTO_RECOVERY | UPS_ENABLE_TRANSACTIONS | (_autocommit ? UPS_ENABLE_FSYNC : 0),
+                ups_env_parameters
+            );
+        } catch (const UpscaleDBException& exception) {
+            if (exception.get_status() == UPS_FILE_NOT_FOUND) {
+                ups_env_parameters[1] = {UPS_PARAM_PAGE_SIZE, 4096};
+                UPS_SAFE_CALL(ups_env_create,
+                    &_ups_env,
+                    _path.c_str(),
+                    UPS_AUTO_RECOVERY | UPS_ENABLE_TRANSACTIONS | (_autocommit ? UPS_ENABLE_FSYNC : 0),
+                    0644,
+                    ups_env_parameters
+                );
+            } else {
+                throw exception;
+            }
+        }
         // create database
-        static const ups_parameter_t ups_db_parameters[] = {
+        ups_parameter_t ups_db_parameters[] = {
             {
                 UPS_PARAM_KEY_TYPE,
                 get_parameter_key_type()
@@ -205,17 +220,30 @@ public:
                 (get_parameter_key_type() == UPS_TYPE_BINARY) ? UPS_PARAM_KEY_SIZE : 0,
                 (get_parameter_key_type() == UPS_TYPE_BINARY) ? sizeof(key_t) : 0
             },
-            // {UPS_PARAM_PAGE_SIZE, 4096},
-            // {UPS_PARAM_JOURNAL_COMPRESSION, UPS_COMPRESSOR_SNAPPY},
             {0, 0}
         };
-        UPS_SAFE_CALL(ups_env_create_db,
-            _ups_env,
-            &_ups_db,
-            1, // name
-            (_allow_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
-            ups_db_parameters
-        );
+        try {
+            UPS_SAFE_CALL(ups_env_create_db,
+                _ups_env,
+                &_ups_db,
+                1, // name
+                (_allow_duplicates ? UPS_ENABLE_DUPLICATE_KEYS : 0),
+                ups_db_parameters
+            );
+        } catch (const UpscaleDBException& exception) {
+            if (exception.get_status() == UPS_DATABASE_ALREADY_EXISTS) {
+                ups_db_parameters[0] = {0, 0};
+                UPS_SAFE_CALL(ups_env_open_db,
+                    _ups_env,
+                    &_ups_db,
+                    1, // name
+                    0, // flags
+                    ups_db_parameters
+                );
+            } else {
+                throw exception;
+            }
+        }
         // create transaction
         UPS_SAFE_CALL(ups_txn_begin,
             &_ups_read_txn,
@@ -240,11 +268,10 @@ public:
         return _path;
     }
 
-    inline void insert(record_t& record) {
-        char* record_pointer = (char*) &record;
+    inline void insert(key_t& key, record_t& record) {
         ups_key_t ups_key = {
             .size = sizeof(key_t),
-            .data = record_pointer + key_offset,
+            .data = &key,
             .flags = UPS_RECORD_USER_ALLOC,
         };
         ups_record_t ups_record = {
@@ -252,6 +279,15 @@ public:
             .data = &record,
             .flags = UPS_RECORD_USER_ALLOC,
         };
+
+        ups_txn_t* ups_write_txn;
+        UPS_SAFE_CALL(ups_txn_begin,
+            &ups_write_txn,
+            _ups_env,
+            "WRITER",
+            NULL,
+            0
+        )
         try {
             UPS_SAFE_CALL(ups_db_insert,
                 _ups_db,
@@ -262,11 +298,15 @@ public:
             );
         } catch (const UpscaleDBException& exception) {
             if (exception.get_status() == UPS_DUPLICATE_KEY) {
-                throw DBDuplicateException(* (key_t*) (record_pointer + key_offset));
+                throw DBDuplicateException(key);
             } else {
                 throw exception;
             }
         }
+        UPS_SAFE_CALL(ups_txn_commit,
+            ups_write_txn,
+            0
+        )
     }
 
     inline UpscaleBTreeRange<key_t, record_t> get() {
@@ -282,10 +322,9 @@ public:
     inline const bool contains(record_t& searched_record) {
         return count(searched_record, true);
     }
-    inline const size_t count(const record_t& searched_record, const bool& stop_at_first=false) {
+    inline const size_t count(const key_t searched_key, const record_t& searched_record, const bool& stop_at_first=false) {
         // extract key
         char* searched_record_pointer = (char*) &searched_record;
-        key_t& searched_key = * (key_t*) (searched_record_pointer + key_offset);
         // initialize UPS key & record
         record_t record;
         ups_record_t ups_record = {
@@ -294,8 +333,7 @@ public:
             .flags = UPS_RECORD_USER_ALLOC,
         };
         char* record_pointer = (char*) &record;
-        key_t& key = * (key_t*) (record_pointer + key_offset);
-        memcpy(&key, &searched_key, sizeof(key_t));
+        key_t key = searched_key;
         ups_key_t ups_key = {
             .size = sizeof(key_t),
             .data = &key,
@@ -372,7 +410,7 @@ public:
             .flags = UPS_RECORD_USER_ALLOC,
         };
         char* record_pointer = (char*) &record;
-        key_t& key = * (key_t*) (record_pointer + key_offset);
+        key_t key = searched_key;
         memcpy(&key, &searched_key, sizeof(key_t));
         ups_key_t ups_key = {
             .size = sizeof(key_t),
@@ -454,6 +492,7 @@ protected:
     inline static uint64_t get_parameter_key_type(uint64_t&) { return UPS_TYPE_UINT64; }
     inline static uint64_t get_parameter_key_type(float&) { return UPS_TYPE_REAL32; }
     inline static uint64_t get_parameter_key_type(double&) { return UPS_TYPE_REAL64; }
+    inline static uint64_t get_parameter_key_type(Timestamp&) { return UPS_TYPE_REAL64; }
     template <typename T> inline static uint64_t get_parameter_key_type(T&) { return UPS_TYPE_BINARY; }
 
     // parameters
@@ -471,12 +510,6 @@ protected:
 #ifndef typeof
 #define typeof(THING) __typeof(THING)
 #endif // typeof
-
-#define UPSCALE_BTREE(CLASS, PROPERTY) UpscaleBTree< \
-    typeof( ((CLASS*) NULL)->PROPERTY ), \
-    (char*) &(((CLASS*) NULL)->PROPERTY) - (char*) NULL, \
-    typeof(CLASS) \
->
 
 
 #endif // CTRADING__DB__UPSCALEBTREE__HPP

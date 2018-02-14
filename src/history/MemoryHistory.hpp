@@ -6,6 +6,7 @@
 #include <deque>
 
 #include "range/ForwardRange.hpp"
+#include "range/SortedRange.hpp"
 
 
 class MemoryHistory : public History {
@@ -23,16 +24,6 @@ public:
         _decisions_by_timestamp.insert({decision.decision_timestamp, decision});
     }
 
-    virtual TradeAverage get_average(const double& timestamp_begin, const double& timestamp_end) {
-        TradeAverage result;
-        auto it_lower = _trades_by_timestamp.lower_bound(timestamp_begin);
-        auto it_upper = _trades_by_timestamp.upper_bound(timestamp_begin);
-        for (auto it=it_lower; it!=it_upper; ++it) {
-            result += it->second;
-        }
-        return result;
-    }
-
     virtual Range<Trade> get_trades() {
         return ForwardRangeFactory(_trades);
     }
@@ -41,6 +32,10 @@ public:
     }
     virtual Range<Decision> get_decisions() {
         return ForwardRangeFactory(_decisions);
+    }
+
+    virtual Range<Trade> get_trades_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
+        return SortedRangeFactory(_trades_by_timestamp, timestamp_begin, timestamp_end);
     }
 
     virtual Span get_time_span() {
