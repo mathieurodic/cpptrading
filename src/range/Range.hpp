@@ -101,6 +101,17 @@ template <typename T>
 const Iterator<T> Range<T>::_end_iterator;
 
 
+#include <ostream>
+
+template <typename T>
+std::ostream& operator << (std::ostream& os, Range<T> range) {
+    for (const T& item : range) {
+        os << item << '\n';
+    }
+    return os;
+}
+
+
 template <typename T>
 class FilterRangeData : public RangeData<T> {
 public:
