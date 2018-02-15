@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <math.h>
+#include <cmath>
 
 // #include <ncurses.h>
 #include <ncursesw/ncurses.h>
@@ -68,6 +68,7 @@ struct PlotterAxisParameters {
         step(NAN),
         origin(NAN),
         grid(NAN) {}
+    enum {LINEAR, LOGARITHMIC} type;
     double min;
     double max;
     double step;
@@ -105,22 +106,45 @@ public:
     }
 
     inline void adjust_axis(PlotterAxisParameters& axis, const int16_t size) {
-        if (isnan(axis.min)) {
+        if (std::isnan(axis.min)) {
             axis.min = axis.max - (size - 1) * axis.step;
         }
-        if (isnan(axis.max)) {
+        if (std::isnan(axis.max)) {
             axis.max = axis.min + (size - 1) * axis.step;
         }
-        if (isnan(axis.step)) {
-            axis.step = (axis.max - axis.min) / (double) (size - 1);
+        if (std::isnan(axis.step)) {
+            switch (axis.type) {
+                case PlotterAxisParameters::LINEAR:
+                    axis.step = (axis.max - axis.min) / (double) (size - 1);
+                    break;
+                case PlotterAxisParameters::LOGARITHMIC:
+                    axis.step = std::log(axis.max / axis.min) / (double) (size - 1);
+                    break;
+            }
         }
     }
 
     inline const int16_t x_to_i(const double x) const {
-        return round((x - _axes.x.min + .5 * _axes.x.step) / _axes.x.step);
+        switch (_axes.x.type) {
+            case PlotterAxisParameters::LINEAR:
+                return std::round((x - _axes.x.min + .5 * _axes.x.step) / _axes.x.step);
+            case PlotterAxisParameters::LOGARITHMIC:
+                if (x < 0) {
+                    return -1;
+                }
+                return std::round(std::log(x / _axes.x.min) / _axes.x.step);
+        }
     }
-    inline const int16_t y_to_j(const double y) const {
-        return round((_axes.y.max - y - .5 * _axes.x.step) / _axes.y.step);
+    inline const int16_t y_to_j(double y) const {
+        switch (_axes.y.type) {
+            case PlotterAxisParameters::LINEAR:
+                return std::round((_axes.y.max - y - .5 * _axes.y.step) / _axes.y.step);
+            case PlotterAxisParameters::LOGARITHMIC:
+                if (y < 0) {
+                    return -1;
+                }
+                return _plot_height - 1 - std::round(std::log(y / _axes.y.min) / _axes.y.step);
+        }
     }
     inline const bool check_ij(const int16_t i, const int16_t j) const {
         if (i < 0 || i >= _plot_width) {
@@ -132,57 +156,88 @@ public:
         return true;
     }
 
-    inline void plot_grid_vertical() {
-        double x_min = _axes.x.origin;
-        while (x_min > _axes.x.min) {
-            x_min -= _axes.x.grid;
-        }
-        // normal grid
-        for (double x=x_min; x<=_axes.x.max; x+=_axes.x.grid) {
-            if (x > _axes.x.min) {
-                int16_t i = x_to_i(x);
-                for (int16_t j=0; j<_plot_height; ++j) {
-                    _plot[j][i] |= 8;
-                }
+    inline void plot_line_vertical(const double& x, const int value) {
+        if (x >= _axes.x.min && x <= _axes.x.max) {
+            int16_t i = x_to_i(x);
+            for (int16_t j=0; j<_plot_height; ++j) {
+                _plot[j][i] |= value;
             }
         }
-        // origin
-        if (_axes.x.origin >= _axes.x.min && _axes.x.origin <= _axes.x.max) {
-            int16_t i = x_to_i(_axes.x.origin);
-            for (int16_t j=0; j<_plot_height; ++j) {
-                _plot[j][i] |= 32;
+    }
+    inline void plot_grid_vertical() {
+        switch (_axes.x.type) {
+            case PlotterAxisParameters::LINEAR: {
+                double x_min = _axes.x.origin;
+                while (x_min > _axes.x.min) {
+                    x_min -= _axes.x.grid;
+                }
+                // normal grid
+                for (double x=x_min; x<=_axes.x.max; x+=_axes.x.grid) {
+                    plot_line_vertical(x, 8);
+                }
+                // origin
+                plot_line_vertical(_axes.x.origin, 32);
+            }
+            case PlotterAxisParameters::LOGARITHMIC: {
+                // normal grid
+                if (_axes.x.grid > 1.) {
+                    double x_min = _axes.x.origin;
+                    while (x_min > _axes.x.min) {
+                        x_min /= _axes.x.grid;
+                    }
+                    for (double x=x_min; x<=_axes.x.max; x*=_axes.x.grid) {
+                        plot_line_vertical(x, 16);
+                    }
+                }
+                // origin
+                plot_line_vertical(_axes.x.origin, 32);
+            }
+        }
+    }
+
+    inline void plot_line_horizontal(const double& y, const int value) {
+        if (y >= _axes.y.min && y <= _axes.y.max) {
+            int16_t j = y_to_j(y);
+            j -= j % 2;
+            for (int16_t i=0; i<_plot_width; ++i) {
+                _plot[j][i] |= value;
+                _plot[j+1][i] |= value;
             }
         }
     }
     inline void plot_grid_horizontal() {
-        double y_min = _axes.y.origin;
-        while (y_min > _axes.y.min) {
-            y_min -= _axes.y.grid;
-        }
-        // normal grid
-        for (double y=y_min; y<=_axes.y.max; y+=_axes.y.grid) {
-            if (y > _axes.y.min) {
-                int16_t j = y_to_j(y);
-                j -= j % 2;
-                for (int16_t i=0; i<_plot_width; ++i) {
-                    _plot[j][i] |= 16;
-                    _plot[j+1][i] |= 16;
+        switch (_axes.y.type) {
+            case PlotterAxisParameters::LINEAR: {
+                double y_min = _axes.y.origin;
+                while (y_min > _axes.y.min) {
+                    y_min -= _axes.y.grid;
                 }
+                // normal grid
+                for (double y=y_min; y<=_axes.y.max; y+=_axes.y.grid) {
+                    plot_line_horizontal(y, 16);
+                }
+                // origin
+                plot_line_horizontal(_axes.y.origin, 32);
             }
-        }
-        // origin
-        if (_axes.y.origin >= _axes.y.min && _axes.y.origin <= _axes.y.max) {
-            int16_t j = y_to_j(_axes.y.origin);
-            j -= j % 2;
-            for (int16_t i=0; i<_plot_width; ++i) {
-                _plot[j][i] |= 32;
-                _plot[j+1][i] |= 32;
+            case PlotterAxisParameters::LOGARITHMIC: {
+                // normal grid
+                if (_axes.y.grid > 1.) {
+                    double y_min = _axes.y.origin;
+                    while (y_min > _axes.y.min) {
+                        y_min /= _axes.y.grid;
+                    }
+                    for (double y=y_min; y<=_axes.y.max; y*=_axes.y.grid) {
+                        plot_line_horizontal(y, 16);
+                    }
+                }
+                // origin
+                plot_line_horizontal(_axes.y.origin, 32);
             }
         }
     }
 
     inline void plot(double x, double y, PlotterColor color=WHITE) {
-        if (isnan(y)) {
+        if (std::isnan(y)) {
             return;
         }
         const int16_t i = x_to_i(x);
@@ -303,7 +358,7 @@ public:
     	clear();
     	noecho();
     	cbreak();
-        // initialize colors
+        // initialize palette
         for (int pixel_bottom=0; pixel_bottom<8; ++pixel_bottom) {
             for (int pixel_top=0; pixel_top<8; ++pixel_top) {
                 init_pair(pixel_top | (pixel_bottom << 3), pixel_top, pixel_bottom);
@@ -352,7 +407,54 @@ public:
         buffer.show();
     }
 
-    virtual void on_key_press(const int key) {}
+    void increase(PlotterAxisParameters& axis) {
+        switch (axis.type) {
+            case PlotterAxisParameters::LINEAR:
+                axis.min += axis.grid;
+                axis.max += axis.grid;
+                break;
+            case PlotterAxisParameters::LOGARITHMIC:
+                axis.min *= axis.grid;
+                axis.max *= axis.grid;
+                break;
+        }
+    }
+    void decrease(PlotterAxisParameters& axis) {
+        switch (axis.type) {
+            case PlotterAxisParameters::LINEAR:
+                axis.min -= axis.grid;
+                axis.max -= axis.grid;
+                break;
+            case PlotterAxisParameters::LOGARITHMIC:
+                axis.min /= axis.grid;
+                axis.max /= axis.grid;
+                break;
+        }
+    }
+    virtual void on_key_press(const int key) {
+        switch (key) {
+            // case 27:
+            case 81:
+            case 113:
+                _is_looping = false;
+                break;
+            case 65:
+                increase(axes.y);
+                break;
+            case 66:
+                decrease(axes.y);
+                break;
+            case 67:
+                increase(axes.x);
+                break;
+            case 68:
+                decrease(axes.x);
+                break;
+        }
+        show();
+        mvprintw(0, 0, "%-6d", key);
+        refresh();
+    }
     inline void start() {
         _is_looping = true;
         show();
