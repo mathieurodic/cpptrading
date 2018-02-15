@@ -16,6 +16,7 @@
 
 #include <vector>
 #include <string>
+#include <functional>
 
 
 enum PlotterColor {
@@ -30,15 +31,15 @@ enum PlotterColor {
 
 
 struct PlotterCurve {
-    PlotterCurve(double (*f1)(double), PlotterColor color) :
+    PlotterCurve(std::function<double(double)> f1, PlotterColor color) :
         type(FUNCTION_1),
         f1(f1),
         color(color) {}
-    PlotterCurve(double (*f2)(double, double), PlotterColor color) :
+    PlotterCurve(std::function<double(double, double)>, PlotterColor color) :
         type(FUNCTION_2),
         f2(f2),
         color(color) {}
-    PlotterCurve(std::pair<double, double> (*f3)(double, double), PlotterColor color) :
+    PlotterCurve(std::function<std::pair<double, double>(double, double)> f3, PlotterColor color) :
         type(FUNCTION_3),
         f3(f3),
         color(color) {}
@@ -52,11 +53,9 @@ struct PlotterCurve {
         FUNCTION_3,
         VALUES,
     } type;
-    union {
-        double (*f1)(double);
-        double (*f2)(double, double);
-        std::pair<double, double> (*f3)(double, double);
-    };
+    std::function<double(double)> f1;
+    std::function<double(double, double)> f2;
+    std::function<std::pair<double, double>(double, double)> f3;
     std::vector<std::pair<double, double>> values;
     PlotterColor color;
 };
@@ -254,17 +253,17 @@ public:
         plot(x, y_range.second, color);
     }
 
-    inline void plot(double (*f)(double), PlotterColor color) {
+    inline void plot(std::function<double(double)> f, PlotterColor color) {
         for (double x=_axes.x.min; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
             plot(x, f(x), color);
         }
     }
-    inline void plot(double (*f)(double, double), PlotterColor color) {
+    inline void plot(std::function<double(double, double)> f, PlotterColor color) {
         for (double x=_axes.x.min-.5*_axes.x.step; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
             plot(x, f(x, x + _axes.x.step), color);
         }
     }
-    inline void plot(std::pair<double, double> (*f)(double, double), PlotterColor color) {
+    inline void plot(std::function<std::pair<double, double>(double, double)> f, PlotterColor color) {
         for (double x=_axes.x.min-.5*_axes.x.step; x<_axes.x.max+_axes.x.step; x+=_axes.x.step) {
             plot(x, f(x, x + _axes.x.step), color);
         }
@@ -376,13 +375,13 @@ public:
         _curves.clear();
     }
 
-    inline void plot(double (*f)(double), PlotterColor color=WHITE) {
+    inline void plot(std::function<double(double)> f, PlotterColor color=WHITE) {
         _curves.push_back(PlotterCurve(f, color));
     }
-    inline void plot(double (*f)(double, double), PlotterColor color=WHITE) {
+    inline void plot(std::function<double(double, double)> f, PlotterColor color=WHITE) {
         _curves.push_back(PlotterCurve(f, color));
     }
-    inline void plot(std::pair<double, double> (*f)(double, double), PlotterColor color=WHITE) {
+    inline void plot(std::function<std::pair<double, double>(double, double)> f, PlotterColor color=WHITE) {
         _curves.push_back(PlotterCurve(f, color));
     }
     inline void plot(std::vector<std::pair<double, double>> values, PlotterColor color=WHITE) {
