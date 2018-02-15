@@ -347,12 +347,12 @@ public:
         switch (_axes.x.type) {
             case PlotterAxisParameters::LINEAR:
             case PlotterAxisParameters::LOGARITHMIC:
-                mvprintw(0, 0, " [ %lf , %lf ] ", _axes.x.min, _axes.x.max);
+                mvprintw(0, 0, " [ %lf , %lf ]  ->  [ %lf , %lf ] ", _axes.x.min, _axes.x.max, _axes.y.min, _axes.y.max);
                 break;
             case PlotterAxisParameters::TEMPORAL: {
                 const std::string min = Timestamp(_axes.x.min);
                 const std::string max = Timestamp(_axes.x.max);
-                mvprintw(0, 0, " [ %s , %s ] ", min.c_str(), max.c_str());
+                mvprintw(0, 0, " [ %s , %s ]  ->  [ %lf , %lf ] ", min.c_str(), max.c_str(), _axes.y.min, _axes.y.max);
                 }
                 break;
         }
@@ -428,27 +428,35 @@ public:
     void increase(PlotterAxisParameters& axis) {
         switch (axis.type) {
             case PlotterAxisParameters::TEMPORAL:
-            case PlotterAxisParameters::LINEAR:
-                axis.min += axis.grid;
-                axis.max += axis.grid;
+            case PlotterAxisParameters::LINEAR: {
+                const double delta = (axis.max - axis.min) / 10.;
+                axis.min += delta;
+                axis.max += delta;
                 break;
-            case PlotterAxisParameters::LOGARITHMIC:
-                axis.min *= axis.grid;
-                axis.max *= axis.grid;
+            }
+            case PlotterAxisParameters::LOGARITHMIC: {
+                const double factor = pow(axis.max / axis.min, .1);
+                axis.min *= factor;
+                axis.max *= factor;
                 break;
+            }
         }
     }
     void decrease(PlotterAxisParameters& axis) {
         switch (axis.type) {
             case PlotterAxisParameters::TEMPORAL:
-            case PlotterAxisParameters::LINEAR:
-                axis.min -= axis.grid;
-                axis.max -= axis.grid;
+            case PlotterAxisParameters::LINEAR: {
+                const double delta = (axis.max - axis.min) / 10.;
+                axis.min -= delta;
+                axis.max -= delta;
                 break;
-            case PlotterAxisParameters::LOGARITHMIC:
-                axis.min /= axis.grid;
-                axis.max /= axis.grid;
+            }
+            case PlotterAxisParameters::LOGARITHMIC: {
+                const double factor = pow(axis.max / axis.min, .1);
+                axis.min /= factor;
+                axis.max /= factor;
                 break;
+            }
         }
     }
     void zoomin(PlotterAxisParameters& axis) {
@@ -461,10 +469,13 @@ public:
                 axis.step = NAN;
                 break;
             }
-            case PlotterAxisParameters::LOGARITHMIC:
-                // axis.min *= axis.grid;
-                // axis.max *= axis.grid;
+            case PlotterAxisParameters::LOGARITHMIC: {
+                const double ratio = axis.max / axis.min;
+                axis.min *= pow(ratio, .25);
+                axis.max /= pow(ratio, .25);
+                axis.step = NAN;
                 break;
+            }
         }
     }
     void zoomout(PlotterAxisParameters& axis) {
@@ -478,8 +489,10 @@ public:
                 break;
             }
             case PlotterAxisParameters::LOGARITHMIC:
-                // axis.min *= axis.grid;
-                // axis.max *= axis.grid;
+                const double ratio = axis.max / axis.min;
+                axis.min /= sqrt(ratio);
+                axis.max *= sqrt(ratio);
+                axis.step = NAN;
                 break;
         }
     }
@@ -508,6 +521,12 @@ public:
                 break;
             case '-':
                 zoomout(axes.x);
+                break;
+            case '*':
+                zoomin(axes.y);
+                break;
+            case '/':
+                zoomout(axes.y);
                 break;
             default:
                 mvprintw(3, 1, "%-3d", key);
