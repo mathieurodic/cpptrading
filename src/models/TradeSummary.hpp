@@ -30,11 +30,13 @@ struct TradeSummaryPart {
 struct TradeSummary {
     inline const bool operator==(const TradeSummary& other) { return memcmp(this, &other, sizeof(*this)) == 0; }
     inline TradeSummary() :
-        spread(NAN) {}
+        spread(NAN),
+        average_price(NAN) {}
     TimestampSpan timestamp_span;
     TradeSummaryPart buys;
     TradeSummaryPart sells;
     double spread;
+    double average_price;
     inline void operator += (const Trade& trade) {
         if (std::isnan(*timestamp_span.from) || trade.timestamp < timestamp_span.from) {
             timestamp_span.from = trade.timestamp;
@@ -55,6 +57,7 @@ struct TradeSummary {
                 break;
         }
         spread = buys.compute_spread_with(sells);
+        average_price = (buys.price + sells.price) / (buys.volume + sells.volume);
     }
 };
 

@@ -9,6 +9,7 @@
 #include "models/Decision.hpp"
 
 #include "range/Range.hpp"
+#include "math/Plotter.hpp"
 
 #include <set>
 #include <ostream>
@@ -58,6 +59,33 @@ public:
 
     virtual Range<Order> get_orders() = 0;
     virtual Range<Decision> get_decisions() = 0;
+
+    virtual void plot() {
+        Plotter plotter;
+        TimestampSpan span = get_time_span();
+        plotter.axes.x.type = PlotterAxisParameters::TEMPORAL;
+        plotter.axes.x.min = span.to - 365.25 * 24. * 3600.;
+        plotter.axes.x.max = span.to;
+        plotter.axes.x.origin = 0.;
+        plotter.axes.x.grid = 365.25 * 24. * 3600. / 12.;
+        //
+        plotter.axes.y.type = PlotterAxisParameters::LOGARITHMIC;
+        plotter.axes.y.min = 1.;
+        plotter.axes.y.max = 100000.;
+        plotter.axes.y.origin = 1.;
+        plotter.axes.y.grid = 10.;
+        //
+        History* history = this;
+        plotter.plot([history](double t1, double t2) mutable {
+            return history->get_trade_summary(t1, t2).average_price;
+            // const double delta = t2 - t1;
+            // return std::pair<double, double>(
+            //     history->get_trade_summary(t1 - delta/2., t1 + delta/2.).average_price,
+            //     history->get_trade_summary(t2 - delta/2., t2 + delta/2.).average_price
+            // );
+        }, GREEN);
+        plotter.start();
+    }
 
     virtual TimestampSpan get_time_span() {
         return {};

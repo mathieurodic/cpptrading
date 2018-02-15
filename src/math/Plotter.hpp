@@ -18,6 +18,8 @@
 #include <string>
 #include <functional>
 
+#include "models/Timestamp.hpp"
+
 
 enum PlotterColor {
     RED = 1,
@@ -31,17 +33,17 @@ enum PlotterColor {
 
 
 struct PlotterCurve {
-    PlotterCurve(std::function<double(double)> f1, PlotterColor color) :
+    PlotterCurve(std::function<double(double)> f, PlotterColor color) :
         type(FUNCTION_1),
-        f1(f1),
+        f1(f),
         color(color) {}
-    PlotterCurve(std::function<double(double, double)>, PlotterColor color) :
+    PlotterCurve(std::function<double(double, double)> f, PlotterColor color) :
         type(FUNCTION_2),
-        f2(f2),
+        f2(f),
         color(color) {}
-    PlotterCurve(std::function<std::pair<double, double>(double, double)> f3, PlotterColor color) :
+    PlotterCurve(std::function<std::pair<double, double>(double, double)> f, PlotterColor color) :
         type(FUNCTION_3),
-        f3(f3),
+        f3(f),
         color(color) {}
     PlotterCurve(std::vector<std::pair<double, double>> values, PlotterColor color) :
         type(VALUES),
@@ -67,7 +69,7 @@ struct PlotterAxisParameters {
         step(NAN),
         origin(NAN),
         grid(NAN) {}
-    enum {LINEAR, LOGARITHMIC} type;
+    enum {TEMPORAL, LINEAR, LOGARITHMIC} type;
     double min;
     double max;
     double step;
@@ -113,6 +115,7 @@ public:
         }
         if (std::isnan(axis.step)) {
             switch (axis.type) {
+                case PlotterAxisParameters::TEMPORAL:
                 case PlotterAxisParameters::LINEAR:
                     axis.step = (axis.max - axis.min) / (double) (size - 1);
                     break;
@@ -125,6 +128,7 @@ public:
 
     inline const int16_t x_to_i(const double x) const {
         switch (_axes.x.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR:
                 return std::round((x - _axes.x.min + .5 * _axes.x.step) / _axes.x.step);
             case PlotterAxisParameters::LOGARITHMIC:
@@ -136,6 +140,7 @@ public:
     }
     inline const int16_t y_to_j(double y) const {
         switch (_axes.y.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR:
                 return std::round((_axes.y.max - y - .5 * _axes.y.step) / _axes.y.step);
             case PlotterAxisParameters::LOGARITHMIC:
@@ -165,6 +170,7 @@ public:
     }
     inline void plot_grid_vertical() {
         switch (_axes.x.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR: {
                 double x_min = _axes.x.origin;
                 while (x_min > _axes.x.min) {
@@ -176,7 +182,7 @@ public:
                 }
                 // origin
                 plot_line_vertical(_axes.x.origin, 32);
-            }
+            } break;
             case PlotterAxisParameters::LOGARITHMIC: {
                 // normal grid
                 if (_axes.x.grid > 1.) {
@@ -190,7 +196,7 @@ public:
                 }
                 // origin
                 plot_line_vertical(_axes.x.origin, 32);
-            }
+            } break;
         }
     }
 
@@ -206,6 +212,7 @@ public:
     }
     inline void plot_grid_horizontal() {
         switch (_axes.y.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR: {
                 double y_min = _axes.y.origin;
                 while (y_min > _axes.y.min) {
@@ -217,7 +224,7 @@ public:
                 }
                 // origin
                 plot_line_horizontal(_axes.y.origin, 32);
-            }
+            } break;
             case PlotterAxisParameters::LOGARITHMIC: {
                 // normal grid
                 if (_axes.y.grid > 1.) {
@@ -231,7 +238,7 @@ public:
                 }
                 // origin
                 plot_line_horizontal(_axes.y.origin, 32);
-            }
+            } break;
         }
     }
 
@@ -337,6 +344,18 @@ public:
                 attroff(A_DIM);
             }
         }
+        switch (_axes.x.type) {
+            case PlotterAxisParameters::LINEAR:
+            case PlotterAxisParameters::LOGARITHMIC:
+                mvprintw(0, 0, " [ %lf , %lf ] ", _axes.x.min, _axes.x.max);
+                break;
+            case PlotterAxisParameters::TEMPORAL: {
+                const std::string min = Timestamp(_axes.x.min);
+                const std::string max = Timestamp(_axes.x.max);
+                mvprintw(0, 0, " [ %s , %s ] ", min.c_str(), max.c_str());
+                }
+                break;
+        }
         refresh();
     }
 
@@ -408,6 +427,7 @@ public:
 
     void increase(PlotterAxisParameters& axis) {
         switch (axis.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR:
                 axis.min += axis.grid;
                 axis.max += axis.grid;
@@ -420,6 +440,7 @@ public:
     }
     void decrease(PlotterAxisParameters& axis) {
         switch (axis.type) {
+            case PlotterAxisParameters::TEMPORAL:
             case PlotterAxisParameters::LINEAR:
                 axis.min -= axis.grid;
                 axis.max -= axis.grid;
@@ -430,6 +451,39 @@ public:
                 break;
         }
     }
+    void zoomin(PlotterAxisParameters& axis) {
+        switch (axis.type) {
+            case PlotterAxisParameters::TEMPORAL:
+            case PlotterAxisParameters::LINEAR: {
+                const double delta = axis.max - axis.min;
+                axis.min += delta / 4.;
+                axis.max -= delta / 4.;
+                axis.step = NAN;
+                break;
+            }
+            case PlotterAxisParameters::LOGARITHMIC:
+                // axis.min *= axis.grid;
+                // axis.max *= axis.grid;
+                break;
+        }
+    }
+    void zoomout(PlotterAxisParameters& axis) {
+        switch (axis.type) {
+            case PlotterAxisParameters::TEMPORAL:
+            case PlotterAxisParameters::LINEAR: {
+                const double delta = axis.max - axis.min;
+                axis.min -= delta / 2.;
+                axis.max += delta / 2.;
+                axis.step = NAN;
+                break;
+            }
+            case PlotterAxisParameters::LOGARITHMIC:
+                // axis.min *= axis.grid;
+                // axis.max *= axis.grid;
+                break;
+        }
+    }
+
     virtual void on_key_press(const int key) {
         switch (key) {
             // case 27:
@@ -449,9 +503,18 @@ public:
             case 68:
                 decrease(axes.x);
                 break;
+            case '+':
+                zoomin(axes.x);
+                break;
+            case '-':
+                zoomout(axes.x);
+                break;
+            default:
+                mvprintw(3, 1, "%-3d", key);
+                return;
         }
         show();
-        mvprintw(0, 0, "%-6d", key);
+        mvprintw(3, 1, "%-3d", key);
         refresh();
     }
     inline void start() {
