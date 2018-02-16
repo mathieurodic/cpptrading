@@ -113,6 +113,7 @@ public:
             if (exception.get_status() == UPS_KEY_NOT_FOUND || exception.get_status() == UPS_INV_PARAMETER || exception.get_status() == UPS_CURSOR_IS_NIL) {
                 return false;
             }
+            throw exception;
         }
     }
     virtual const bool next(record_t*& value) {
@@ -130,7 +131,7 @@ public:
                 throw exception;
             }
         }
-        if (!_is_fullrange && (!_is_reverse && _key > _key_end) || (_is_reverse && _key < _key_end)) {
+        if ((!_is_fullrange && (!_is_reverse && _key > _key_end)) || (_is_reverse && _key < _key_end)) {
             return false;
         }
         return true;

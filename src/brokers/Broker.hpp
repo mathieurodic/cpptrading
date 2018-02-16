@@ -36,6 +36,8 @@ public:
                 case SELL:
                     decision.amount = _stock_balance;
                     break;
+                case WAIT:
+                    break;
             }
         }
         if (decision.amount == 0.) {
@@ -66,6 +68,8 @@ public:
                 case SELL:
                     this->_balance += decision.amount * decision.price * (1. - _commission);
                     this->_stock_balance -= decision.amount;
+                    break;
+                case WAIT:
                     break;
             }
         }

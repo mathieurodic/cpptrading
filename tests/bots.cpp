@@ -26,16 +26,17 @@ int main(int argc, char const *argv[]) {
     {
         PretendBroker broker(100, 2.5e-3);
         broker.historize(mem_history);
-        broker.historize(log_history);
-        RandomBot bot(mem_history, broker);
+        // broker.historize(log_history);
+        RandomBot bot(mem_history, broker, 1e-1);
         std::cout << "FINISHED BROKER & BOT" << '\n';
         auto span = mem_history.get_time_span();
-        std::cout << "SIMULATING " << bot.get_name() << " FROM " << Timestamp(span.min) << " TO " << Timestamp(span.max) << '\n';
-        for (double t=span.min; t<=span.max; t+= 60.) {
+        std::cout << "SIMULATING '" << bot.get_name() << "': " << span << '\n';
+        for (double t=span.from; t<=span.to; t+= 60.) {
             bot.decide_and_execute(t);
-            std::cout << broker << '\n';
+            // std::cout << broker << '\n';
         }
         std::cout << "TESTED\n";
     }
+    mem_history.plot();
     return 0;
 }
