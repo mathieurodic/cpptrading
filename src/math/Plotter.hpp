@@ -499,8 +499,6 @@ public:
 
     virtual void on_key_press(const int key) {
         switch (key) {
-            // case 27:
-            case 81:
             case 113:
                 _is_looping = false;
                 break;
@@ -516,24 +514,54 @@ public:
             case 68:
                 decrease(axes.x);
                 break;
-            case '+':
+            case 43:
                 zoomin(axes.x);
                 break;
-            case '-':
+            case 45:
                 zoomout(axes.x);
                 break;
-            case '*':
+            case 42:
                 zoomin(axes.y);
                 break;
-            case '/':
+            case 47:
                 zoomout(axes.y);
+                break;
+            case 104:
+                if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+                    axes.x.grid = 3600.;
+                }
+                break;
+            case 100:
+                if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+                    axes.x.grid = 24. * 3600.;
+                }
+                break;
+            case 119:
+                if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+                    axes.x.grid = 7. * 24. * 3600.;
+                }
+                break;
+            case 109:
+                if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+                    axes.x.grid = 365.259636 * 24. * 3600. / 12.;
+                }
+                break;
+            case 121:
+                if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+                    axes.x.grid = 365.259636 * 24. * 3600.;
+                }
                 break;
             default:
                 mvprintw(3, 1, "%-3d", key);
                 return;
         }
         show();
-        mvprintw(3, 1, "%-3d", key);
+        static std::vector<int> keys;
+        keys.push_back(key);
+        int i = 0;
+        for (auto it=keys.rbegin(); it!=keys.rend() && i<4; ++it, ++i) {
+            mvprintw(3+i, 1, "%-3d", *it);
+        }
         refresh();
     }
     inline void start() {
@@ -541,7 +569,10 @@ public:
         show();
         while (_is_looping) {
             const int c = getch();
-            on_key_press(c);
+            if (c != ERR) {
+                on_key_press(c);
+            }
+            std::this_thread::sleep_for(std::chrono::duration<double>(1e-6));
         }
     }
     inline void stop() {
