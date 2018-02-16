@@ -67,7 +67,7 @@ public:
         plotter.axes.x.min = span.to - 365.25 * 24. * 3600.;
         plotter.axes.x.max = span.to;
         plotter.axes.x.origin = 0.;
-        plotter.axes.x.grid = 365.25 * 24. * 3600. / 12.;
+        plotter.axes.x.grid = 365.259636 * 24. * 3600. / 12.;
         //
         plotter.axes.y.type = PlotterAxisParameters::LOGARITHMIC;
         plotter.axes.y.min = 1.;
