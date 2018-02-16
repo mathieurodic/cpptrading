@@ -64,7 +64,7 @@ public:
         Plotter plotter;
         TimestampSpan span = get_time_span();
         plotter.axes.x.type = PlotterAxisParameters::TEMPORAL;
-        plotter.axes.x.min = span.to - 365.25 * 24. * 3600.;
+        plotter.axes.x.min = span.from;
         plotter.axes.x.max = span.to;
         plotter.axes.x.origin = 0.;
         plotter.axes.x.grid = 365.259636 * 24. * 3600. / 12.;
@@ -78,17 +78,21 @@ public:
         History* history = this;
         plotter.plot([history](double t1, double t2) mutable {
             return history->get_trade_summary(t1, t2).average_price;
-            // const double delta = t2 - t1;
-            // return std::pair<double, double>(
-            //     history->get_trade_summary(t1 - delta/2., t1 + delta/2.).average_price,
-            //     history->get_trade_summary(t2 - delta/2., t2 + delta/2.).average_price
-            // );
         }, GREEN);
         plotter.start();
     }
 
     virtual TimestampSpan get_time_span() {
-        return {};
+        TimestampSpan timestamp_span;
+        for (const Trade& trade : get_trades()) {
+            if (std::isnan(timestamp_span.from) || trade.timestamp < timestamp_span.from) {
+                timestamp_span.from = trade.timestamp;
+            }
+            if (std::isnan(timestamp_span.to) || trade.timestamp > timestamp_span.to) {
+                timestamp_span.to = trade.timestamp;
+            }
+        }
+        return timestamp_span;
     }
 
     template <typename T>

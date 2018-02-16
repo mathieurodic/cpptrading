@@ -40,17 +40,13 @@ public:
 
     virtual TimestampSpan get_time_span() {
         TimestampSpan timestamp_span;
-        {
-            const auto it = _trades_by_timestamp.begin();
-            if (it != _trades_by_timestamp.end()) {
-                timestamp_span.from = it->first;
-            }
+        auto it_from = _trades_by_timestamp.begin();
+        if (it_from != _trades_by_timestamp.end()) {
+            timestamp_span.from = it_from->first;
         }
-        {
-            const auto it = _trades_by_timestamp.rbegin();
-            if (it != _trades_by_timestamp.rend()) {
-                timestamp_span.to = it->first;
-            }
+        auto it_to = _trades_by_timestamp.rbegin();
+        if (it_to != _trades_by_timestamp.rend()) {
+            timestamp_span.to = it_to->first;
         }
         return timestamp_span;
     }
@@ -63,11 +59,11 @@ private:
 
     std::deque<Trade> _trades;
     std::multimap<uint64_t, Trade> _trades_by_id;
-    std::multimap<double, Trade> _trades_by_timestamp;
+    std::multimap<Timestamp, Trade> _trades_by_timestamp;
     std::deque<Order> _orders;
     std::multimap<uint64_t, Order> _orders_by_id;
     std::deque<Decision> _decisions;
-    std::multimap<double, Decision> _decisions_by_timestamp;
+    std::multimap<Timestamp, Decision> _decisions_by_timestamp;
 
 };
 
