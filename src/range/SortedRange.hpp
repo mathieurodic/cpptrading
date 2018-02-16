@@ -25,23 +25,28 @@ public:
         } else {
             _container_iterator = _container.begin();
         }
-        if (_container_iterator != _container.end()) {
-            value = & (_container_iterator->second);
-            return true;
-        }
-        return false;
+        return iterate(value);
     }
 
     virtual const bool next(T*& value) {
         ++_container_iterator;
+        return iterate(value, true);
+    }
+
+private:
+
+    inline const bool iterate(T*& value, const bool& check_begin=false) {
         if (_container_iterator != _container.end() && (!_is_bounded || _container_iterator->first <= _end)) {
+            if (check_begin) {
+                if (_container_iterator->first < _begin) {
+                    return false;
+                }
+            }
             value = & (_container_iterator->second);
             return true;
         }
         return false;
     }
-
-private:
 
     Container& _container;
     typename Container::iterator _container_iterator;

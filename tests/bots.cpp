@@ -27,7 +27,7 @@ int main(int argc, char const *argv[]) {
         PretendBroker broker(100, 2.5e-3);
         broker.historize(mem_history);
         // broker.historize(log_history);
-        RandomBot bot(mem_history, broker, 1e-1);
+        RandomBot bot(mem_history, broker, 1e-3);
         std::cout << "FINISHED BROKER & BOT" << '\n';
         auto span = mem_history.get_time_span();
         std::cout << "SIMULATING '" << bot.get_name() << "': " << span << '\n';

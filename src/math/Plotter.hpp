@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <cmath>
+#include <thread>
 
 // #include <ncurses.h>
 #include <ncursesw/ncurses.h>
@@ -163,8 +164,10 @@ public:
     inline void plot_line_vertical(const double& x, const int value) {
         if (x >= _axes.x.min && x <= _axes.x.max) {
             int16_t i = x_to_i(x);
-            for (int16_t j=0; j<_plot_height; ++j) {
-                _plot[j][i] |= value;
+            if (i >= 0 && i < _plot_width) {
+                for (int16_t j=0; j<_plot_height; ++j) {
+                    _plot[j][i] |= value;
+                }
             }
         }
     }
@@ -203,10 +206,12 @@ public:
     inline void plot_line_horizontal(const double& y, const int value) {
         if (y >= _axes.y.min && y <= _axes.y.max) {
             int16_t j = y_to_j(y);
-            j -= j % 2;
-            for (int16_t i=0; i<_plot_width; ++i) {
-                _plot[j][i] |= value;
-                _plot[j+1][i] |= value;
+            if (j >= 0 && j < _plot_width) {
+                j -= j % 2;
+                for (int16_t i=0; i<_plot_width; ++i) {
+                    _plot[j][i] |= value;
+                    _plot[j+1][i] |= value;
+                }
             }
         }
     }

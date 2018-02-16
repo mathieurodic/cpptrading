@@ -49,6 +49,11 @@ public:
             return trade.timestamp > timestamp_begin && trade.timestamp <= timestamp_end;
         });
     }
+    virtual Range<Decision> get_decisions_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
+        return get_decisions().filter([timestamp_begin, timestamp_end] (const Decision& decision) -> bool {
+            return decision.decision_timestamp > timestamp_begin && decision.decision_timestamp <= timestamp_end;
+        });
+    }
     virtual TradeSummary get_trade_summary(const double& timestamp_begin, const double timestamp_end) {
         TradeSummary summary;
         for (const Trade& trade : get_trades_by_timestamp(timestamp_begin, timestamp_end)) {
@@ -79,6 +84,38 @@ public:
         plotter.plot([history](double t1, double t2) mutable {
             return history->get_trade_summary(t1, t2).average_price;
         }, GREEN);
+        plotter.plot([history](double t1, double t2) mutable -> std::pair<double, double> {
+            double price_min = NAN;
+            double price_max = NAN;
+            for (const Decision& decision : history->get_decisions_by_timestamp(t1, t2)) {
+                if (decision.type != BUY) {
+                    return {NAN, NAN};
+                }
+                if (std::isnan(price_min) || decision.price < price_min) {
+                    price_min = decision.price;
+                }
+                if (std::isnan(price_max) || decision.price > price_max) {
+                    price_max = decision.price;
+                }
+            }
+            return {price_min, price_max};
+        }, RED);
+        plotter.plot([history](double t1, double t2) mutable -> std::pair<double, double> {
+            double price_min = NAN;
+            double price_max = NAN;
+            for (const Decision& decision : history->get_decisions_by_timestamp(t1, t2)) {
+                if (decision.type != SELL) {
+                    return {NAN, NAN};
+                }
+                if (std::isnan(price_min) || decision.price < price_min) {
+                    price_min = decision.price;
+                }
+                if (std::isnan(price_max) || decision.price > price_max) {
+                    price_max = decision.price;
+                }
+            }
+            return {price_min, price_max};
+        }, BLUE);
         plotter.start();
     }
 

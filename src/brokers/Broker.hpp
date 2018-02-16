@@ -54,6 +54,9 @@ public:
 
     void execute(Decision& decision) {
         Decision original_decision = decision;
+        if (decision.type == WAIT) {
+            return;
+        }
         if (validate(decision)) {
             send(decision);
         } else {

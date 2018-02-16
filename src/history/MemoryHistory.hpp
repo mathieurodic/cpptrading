@@ -22,6 +22,7 @@ public:
     }
     virtual void feed(Decision& decision) {
         _decisions_by_timestamp.insert({decision.decision_timestamp, decision});
+        _decisions.push_back(decision);
     }
 
     virtual Range<Trade> get_trades() {
@@ -36,6 +37,9 @@ public:
 
     virtual Range<Trade> get_trades_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
         return SortedRangeFactory(_trades_by_timestamp, timestamp_begin, timestamp_end);
+    }
+    virtual Range<Decision> get_decisions_by_timestamp(Timestamp timestamp_begin, Timestamp timestamp_end) {
+        return SortedRangeFactory(_decisions_by_timestamp, timestamp_begin, timestamp_end);
     }
 
     virtual TimestampSpan get_time_span() {

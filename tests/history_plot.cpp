@@ -6,9 +6,11 @@
 int main(int argc, char const *argv[]) {
 
     DBHistory db_history("/tmp/cpptrading-tests/history_plot");
-    // CSVSource source("btceur", "data/localbtcEUR.csv");
-    // source.historize(db_history);
-    // source.parse();
+    // {
+    //     CSVSource source("btceur", "data/localbtcEUR.csv");
+    //     source.historize(db_history);
+    //     source.parse(1e4);
+    // }
 
     MemoryHistory mem_history;
     mem_history.synchronize_with(db_history);
