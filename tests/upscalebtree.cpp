@@ -26,13 +26,21 @@ struct test_t {
 
 
 std::ostream& operator<<(std::ostream& os, test_t test) {
-    os << test.a << ", " << (int) test.b << ", " << test.c << ", " << test.d;
+    return (os
+        << test.a
+        << ", "
+        << (int) test.b
+        << ", "
+        << test.c
+        << ", "
+        << test.d
+    );
 }
 
 
 int main(int argc, char const *argv[]) {
     std::string btree_path = "/tmp/ctrading/test/btree.btree";
-    UPSCALE_BTREE(test_t, c) btree(btree_path);
+    UpscaleBTree<float, test_t> btree(btree_path);
 
     printf("\nInstanciating tests\n");
     std::vector<test_t> tests;
@@ -47,7 +55,7 @@ int main(int argc, char const *argv[]) {
 
     printf("\nInserting\n");
     for (test_t& test : tests) {
-        btree.insert(test);
+        btree.insert(test.c, test);
     }
 
     printf("\nShowing ]2, 12]\n");
@@ -80,7 +88,7 @@ int main(int argc, char const *argv[]) {
                 .c = value,
                 .d = value,
             };
-            std::cout << value << ": " << btree.count(test) << ", " << btree.count(value) << ", " << (btree.contains(value) ? "true" : "false") << '\n';
+            std::cout << value << ": " << btree.count(test.c, test) << ", " << btree.count(test.c, value) << ", " << (btree.contains(value) ? "true" : "false") << '\n';
         }
     }
 
@@ -96,7 +104,7 @@ int main(int argc, char const *argv[]) {
     printf("\nTry with duplicates\n");
     {
         std::string btree_path = "/tmp/ctrading/test/btree.dup.btree";
-        UPSCALE_BTREE(test_t, c) btree(btree_path, true);
+        UpscaleBTree<float, test_t> btree(btree_path, true);
         for (int i=0; i<32; ++i) {
             test_t test = {
                 .a = i,
@@ -104,9 +112,9 @@ int main(int argc, char const *argv[]) {
                 .c = i,
                 .d = i,
             };
-            btree.insert(test);
+            btree.insert(test.c, test);
             if (i < 16) {
-                btree.insert(test);
+                btree.insert(test.c, test);
             }
         }
         for (const auto& test : btree.get()) {
