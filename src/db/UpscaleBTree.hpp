@@ -78,8 +78,7 @@ public:
 
     inline ~UpscaleBTreeRangeData() {
         if (_ups_cursor) {
-            UPS_SAFE_CALL(ups_cursor_close,
-                _ups_cursor);
+            ups_cursor_close(_ups_cursor);
             _ups_cursor = NULL;
         }
     }
@@ -171,6 +170,35 @@ public:
 };
 
 
+template <typename key_t>
+const uint64_t get_ups_key_type() {
+    return UPS_TYPE_BINARY;
+}
+
+template <>
+const uint64_t get_ups_key_type<int8_t>() { return UPS_TYPE_UINT8; }
+template <>
+const uint64_t get_ups_key_type<uint8_t>() { return UPS_TYPE_UINT8; }
+template <>
+const uint64_t get_ups_key_type<int16_t>() { return UPS_TYPE_UINT16; }
+template <>
+const uint64_t get_ups_key_type<uint16_t>() { return UPS_TYPE_UINT16; }
+template <>
+const uint64_t get_ups_key_type<int32_t>() { return UPS_TYPE_UINT32; }
+template <>
+const uint64_t get_ups_key_type<uint32_t>() { return UPS_TYPE_UINT32; }
+template <>
+const uint64_t get_ups_key_type<int64_t>() { return UPS_TYPE_UINT64; }
+template <>
+const uint64_t get_ups_key_type<uint64_t>() { return UPS_TYPE_UINT64; }
+template <>
+const uint64_t get_ups_key_type<float>() { return UPS_TYPE_REAL32; }
+template <>
+const uint64_t get_ups_key_type<double>() { return UPS_TYPE_REAL64; }
+template <>
+const uint64_t get_ups_key_type<Timestamp>() { return UPS_TYPE_REAL64; }
+
+
 template <typename key_t, typename record_t>
 class UpscaleBTree {
 public:
@@ -214,11 +242,11 @@ public:
         ups_parameter_t ups_db_parameters[] = {
             {
                 UPS_PARAM_KEY_TYPE,
-                get_parameter_key_type()
+                get_ups_key_type<key_t>()
             },
             {
-                (get_parameter_key_type() == UPS_TYPE_BINARY) ? UPS_PARAM_KEY_SIZE : 0,
-                (get_parameter_key_type() == UPS_TYPE_BINARY) ? sizeof(key_t) : 0
+                (get_ups_key_type<key_t>() == UPS_TYPE_BINARY) ? UPS_PARAM_KEY_SIZE : 0,
+                (get_ups_key_type<key_t>() == UPS_TYPE_BINARY) ? sizeof(key_t) : 0
             },
             {0, 0}
         };
@@ -255,12 +283,8 @@ public:
     }
 
     inline ~UpscaleBTree() {
-        ups_txn_abort(
-            _ups_read_txn,
-            0
-        );
-        UPS_SAFE_CALL(ups_env_close,
-            _ups_env, UPS_AUTO_CLEANUP);
+        ups_txn_abort(_ups_read_txn, 0);
+        ups_env_close(_ups_env, UPS_AUTO_CLEANUP);
         _ups_env = NULL;
     }
 
@@ -509,22 +533,6 @@ public:
 
 protected:
 
-    inline static uint64_t get_parameter_key_type() {
-        return get_parameter_key_type(* (key_t*) NULL);
-    }
-    inline static uint64_t get_parameter_key_type(int8_t&) { return UPS_TYPE_UINT8; }
-    inline static uint64_t get_parameter_key_type(uint8_t&) { return UPS_TYPE_UINT8; }
-    inline static uint64_t get_parameter_key_type(int16_t&) { return UPS_TYPE_UINT16; }
-    inline static uint64_t get_parameter_key_type(uint16_t&) { return UPS_TYPE_UINT16; }
-    inline static uint64_t get_parameter_key_type(int32_t&) { return UPS_TYPE_UINT32; }
-    inline static uint64_t get_parameter_key_type(uint32_t&) { return UPS_TYPE_UINT32; }
-    inline static uint64_t get_parameter_key_type(int64_t&) { return UPS_TYPE_UINT64; }
-    inline static uint64_t get_parameter_key_type(uint64_t&) { return UPS_TYPE_UINT64; }
-    inline static uint64_t get_parameter_key_type(float&) { return UPS_TYPE_REAL32; }
-    inline static uint64_t get_parameter_key_type(double&) { return UPS_TYPE_REAL64; }
-    inline static uint64_t get_parameter_key_type(Timestamp&) { return UPS_TYPE_REAL64; }
-    template <typename T> inline static uint64_t get_parameter_key_type(T&) { return UPS_TYPE_BINARY; }
-
     // parameters
     std::string _path;
     bool _allow_duplicates;
@@ -535,7 +543,6 @@ protected:
     ups_db_t* _ups_db;
     ups_txn_t* _ups_read_txn;
 };
-
 
 #ifndef typeof
 #define typeof(THING) __typeof(THING)
