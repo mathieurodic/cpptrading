@@ -25,10 +25,11 @@ public:
         return "BOT";
     }
 
-    virtual Decision decide(const Timestamp& timestamp) = 0;
+    virtual Decision decide(const Timestamp& timestamp, const Balance& balance) = 0;
 
     void decide_and_execute(const Timestamp& timestamp) {
-        Decision decision = decide(timestamp);
+        const Balance& balance = _history.get_balance_at_timestamp(timestamp);
+        Decision decision = decide(timestamp, balance);
         _broker.execute(decision);
     }
 

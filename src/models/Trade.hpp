@@ -20,6 +20,7 @@ struct Trade {
         volume(NAN),
         price(NAN),
         type(UNDEFINED),
+        decision_id(0),
         buy_order_id(0),
         sell_order_id(0) {}
 
@@ -34,8 +35,9 @@ struct Trade {
         struct tm t;
         char tmp_type[8];
         int year;
-        int result = sscanf(source.c_str(), "<Trade id=%" PRIu64 " buy_order_id=%" PRIu64 " sell_order_id=%" PRIu64 " timestamp=%d-%d-%dT%d:%d:%d type=%c%c%c%c price=%lf volume=%lf>",
+        int result = sscanf(source.c_str(), "<Trade id=%" PRIu64 " decision_id=%" PRIu64 " buy_order_id=%" PRIu64 " sell_order_id=%" PRIu64 " timestamp=%d-%d-%dT%d:%d:%d type=%c%c%c%c price=%lf volume=%lf>",
             &id,
+            &decision_id,
             &buy_order_id,
             &sell_order_id,
             &year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec,
@@ -81,6 +83,7 @@ struct Trade {
     double price;
     ActionType type;
     Timestamp timestamp;
+    uint64_t decision_id;
     uint64_t buy_order_id;
     uint64_t sell_order_id;
 };
@@ -100,6 +103,7 @@ inline std::ostream& operator << (std::ostream& os, const Trade& trade) {
     return (os
         << "<Trade"
         << " id=" << trade.id
+        << " decision_id=" << trade.buy_order_id
         << " buy_order_id=" << trade.buy_order_id
         << " sell_order_id=" << trade.sell_order_id
         << " timestamp=" << Timestamp(trade.timestamp)

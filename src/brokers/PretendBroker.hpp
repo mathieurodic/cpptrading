@@ -3,32 +3,48 @@
 
 
 #include "./Broker.hpp"
+#include "models/Balance.hpp"
 
 
 class PretendBroker : public Broker {
 public:
 
-    using Broker::_balance;
-    using Broker::_commission;
+    inline void init(const Timestamp& timestamp, const double& liquidity, const double& commission) {
+        _commission = commission;
+        BalanceChange balance_change;
+        balance_change.timestamp = timestamp;
+        balance_change.origin.type = BalanceChangeOrigin::INIT;
+        balance_change.origin.id = 0;
+        balance_change.consolidated.liquidity = liquidity;
+        balance_change.consolidated.stock = 0.;
+        balance_change.consolidated.commission = 0.;
+        feed(balance_change);
+    }
 
-    inline PretendBroker(const double balance, const double commission) {
-        this->_balance = balance;
-        this->_stock_balance = 0.;
-        this->_commission = commission;
+    virtual const double compute_commission(const Trade& trade) {
+        return trade.price * trade.volume * _commission;
     }
 
     virtual const std::string get_name() const {
         return "PretendBroker";
     }
 
-    virtual void send(Decision& decision) {
+    virtual std::vector<Trade> send(Decision& decision) {
         decision.status = Decision::PASSED;
-        decision.action_timestamp = decision.decision_timestamp;
-        decision.execution_timestamp = decision.decision_timestamp;
+        Trade trade;
+        trade.timestamp = decision.timestamp;
+        trade.decision_id = decision.id;
+        trade.volume = decision.amount;
+        trade.price = decision.price;
+        trade.type = decision.type;
+        trade.buy_order_id = 0;
+        trade.sell_order_id = 0;
+        return {trade};
     }
 
 private:
 
+    double _commission;
 };
 
 

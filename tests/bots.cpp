@@ -20,13 +20,14 @@ int main(int argc, char const *argv[]) {
         CSVSource source("btceur", "data/localbtcEUR.csv");
         std::cout << "\nSOURCED\n\n";
         source.historize(mem_history);
-        source.parse(1000);
+        source.parse();
         std::cout << "\nPARSED\n\n";
     }
     {
-        PretendBroker broker(100, 2.5e-3);
+        PretendBroker broker;
         broker.historize(mem_history);
         // broker.historize(log_history);
+        broker.init(Timestamp(2001,1,1), 100, 2.5e-3);
         RandomBot bot(mem_history, broker, 1e-3);
         std::cout << "FINISHED BROKER & BOT" << '\n';
         auto span = mem_history.get_time_span();

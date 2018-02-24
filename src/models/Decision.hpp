@@ -15,11 +15,11 @@
 struct Decision {
 
     inline Decision() :
+        id(++last_id),
         type(WAIT),
         key(rand()),
         status(PENDING),
-        action_timestamp(NAN),
-        execution_timestamp(NAN),
+        timestamp(NAN),
         confidence(NAN),
         order_id(0),
         amount(NAN),
@@ -37,6 +37,7 @@ struct Decision {
         return false;
     }
 
+    uint64_t id;
     ActionType type;
     int key;
     enum {
@@ -44,15 +45,19 @@ struct Decision {
         PENDING = 0,
         PASSED = 1
     } status;
-    Timestamp decision_timestamp;
-    Timestamp action_timestamp;
-    Timestamp execution_timestamp;
+    Timestamp timestamp;
     double confidence;
     double amount;
     double price;
     uint64_t order_id;
     char source[32];
+
+private:
+    static uint64_t last_id;
 };
+
+uint64_t Decision::last_id = 0;
+
 
 #pragma pack(pop)
 
@@ -72,9 +77,7 @@ inline std::ostream& operator << (std::ostream& os, const Decision& decision) {
         << "<Decision"
         << " type=" << decision.type
         << " status=" << status
-        << " decision_timestamp=" << Timestamp(decision.decision_timestamp)
-        << " action_timestamp=" << Timestamp(decision.action_timestamp)
-        << " execution_timestamp=" << Timestamp(decision.execution_timestamp)
+        << " timestamp=" << Timestamp(decision.timestamp)
         << " price=" << decision.price
         << " amount=" << decision.amount
         << " order_id=" << decision.order_id

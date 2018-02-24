@@ -3,13 +3,11 @@
 
 
 #include <set>
+#include <vector>
 
 
 class Broker {
 public:
-
-    inline Broker() :
-        _commission(0.) {}
 
     virtual const std::string get_name() const {
         return "Broker";
@@ -19,7 +17,7 @@ public:
         _histories.insert(&history);
     }
 
-    virtual void send(Decision& decision) = 0;
+    virtual std::vector<Trade> send(Decision& decision) = 0;
 
     const bool validate(Decision& decision) {
         if (decision.type == WAIT) {
@@ -31,10 +29,10 @@ public:
         if (std::isnan(decision.amount)) {
             switch (decision.type) {
                 case BUY:
-                    decision.amount = _balance / decision.price;
+                    decision.amount = get_balance_at_timestamp(decision.timestamp).liquidity / decision.price;
                     break;
                 case SELL:
-                    decision.amount = _stock_balance;
+                    decision.amount = get_balance_at_timestamp(decision.timestamp).stock;
                     break;
                 case WAIT:
                     break;
@@ -46,10 +44,20 @@ public:
         return true;
     }
 
-    void feed(Decision& decision) {
+    template <typename T>
+    void feed(T& item) {
         for (auto history : _histories) {
-            history->feed(decision);
+            history->feed(item);
         }
+    }
+
+    virtual const double compute_commission(const Trade& trade) = 0;
+
+    const Balance get_balance_at_timestamp(const Timestamp& timestamp) {
+        for (History* history : _histories) {
+            return history->get_balance_at_timestamp(timestamp);
+        }
+        return Balance();
     }
 
     void execute(Decision& decision) {
@@ -57,44 +65,47 @@ public:
         if (decision.type == WAIT) {
             return;
         }
+        std::vector<Trade> trades;
         if (validate(decision)) {
-            send(decision);
+            trades = send(decision);
         } else {
             decision.status = Decision::CANCELLED;
         }
-        if (decision.status == Decision::PASSED) {
+        //
+        for (Trade& trade : trades) {
+            BalanceChange balance_change;
+            balance_change.timestamp = trade.timestamp;
+            balance_change.origin.type = BalanceChangeOrigin::TRADE;
+            balance_change.origin.id = trade.id;
             switch (decision.type) {
                 case BUY:
-                    this->_balance -= decision.amount * decision.price;
-                    this->_stock_balance += decision.amount * (1. - _commission);
+                    balance_change.delta.liquidity = -trade.volume * trade.price;
+                    balance_change.delta.stock = +trade.volume;
                     break;
                 case SELL:
-                    this->_balance += decision.amount * decision.price * (1. - _commission);
-                    this->_stock_balance -= decision.amount;
+                    balance_change.delta.liquidity = +trade.volume * trade.price;
+                    balance_change.delta.stock = -trade.volume;
                     break;
                 case WAIT:
                     break;
             }
+            balance_change.delta.commission = compute_commission(trade);
+            balance_change.consolidated = get_balance_at_timestamp(trade.timestamp) + balance_change.delta;
+            // std::cout << balance_change << '\n';
+            feed(trade);
+            feed(balance_change);
         }
+        BalanceChange balance_change;
+        //
         if (original_decision != decision) {
             feed(original_decision);
         }
         feed(decision);
     }
 
-    inline const double& get_balance() {
-        return _balance;
-    }
-    inline const double& get_stock_balance() {
-        return _stock_balance;
-    }
-
 protected:
 
     std::set<History*> _histories;
-    double _balance;
-    double _stock_balance;
-    double _commission;
 
 };
 
@@ -104,8 +115,6 @@ protected:
 inline std::ostream& operator<<(std::ostream& os, Broker& broker) {
     return (os
         << "<" << broker.get_name()
-        << " balance=" << broker.get_balance()
-        << " stock_balance=" << broker.get_stock_balance()
         << ">"
     );
 }

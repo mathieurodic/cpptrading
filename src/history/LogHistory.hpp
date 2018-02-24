@@ -41,6 +41,7 @@ private:
 
 };
 
+template <> const std::string LogHistoryRangeData<BalanceChange>::_model_name = "BalanceChange";
 template <> const std::string LogHistoryRangeData<Trade>::_model_name = "Trade";
 template <> const std::string LogHistoryRangeData<Order>::_model_name = "Order";
 template <> const std::string LogHistoryRangeData<Decision>::_model_name = "Decision";
@@ -71,6 +72,9 @@ public:
         return _is_stdout ? std::cout : _file;
     }
 
+    virtual void feed(BalanceChange& balance_change) {
+        _feed(balance_change);
+    }
     virtual void feed(Trade& trade) {
         _feed(trade);
     }
@@ -81,6 +85,11 @@ public:
         _feed(decision);
     }
 
+    virtual const Balance get_balance_at_timestamp(Timestamp& timestamp) {
+    }
+    virtual Range<BalanceChange> get_balance_changes() {
+        return _is_stdout ? Range<BalanceChange>() : LogHistoryRange<BalanceChange>(_path);
+    }
     virtual Range<Trade> get_trades() {
         return _is_stdout ? Range<Trade>() : LogHistoryRange<Trade>(_path);
     }

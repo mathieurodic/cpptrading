@@ -12,7 +12,7 @@ public:
 
     template<typename ...Args>
     inline Exception(Args const&... args) : _what(concatenate(args...)) {
-        // std::cerr << '\n' << _what << '\n';
+        std::cerr << "\033[2m" << '\n' << _what << "\033[0m" << '\n';
     }
 
     const char* what() const noexcept {

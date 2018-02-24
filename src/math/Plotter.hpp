@@ -145,7 +145,7 @@ public:
             case PlotterAxisParameters::LINEAR:
                 return std::round((_axes.y.max - y - .5 * _axes.y.step) / _axes.y.step);
             case PlotterAxisParameters::LOGARITHMIC:
-                if (y < 0) {
+                if (y <= 0) {
                     return -1;
                 }
                 return _plot_height - 1 - std::round(std::log(y / _axes.y.min) / _axes.y.step);

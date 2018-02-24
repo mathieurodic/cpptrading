@@ -9,7 +9,7 @@ int main(int argc, char const *argv[]) {
     // {
     //     CSVSource source("btceur", "data/localbtcEUR.csv");
     //     source.historize(db_history);
-    //     source.parse(1e4);
+    //     source.parse();
     // }
 
     MemoryHistory mem_history;
