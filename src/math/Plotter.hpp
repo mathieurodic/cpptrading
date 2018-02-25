@@ -56,6 +56,39 @@ struct PlotterCurve {
         FUNCTION_3,
         VALUES,
     } type;
+
+    const std::pair<double, double> compute(std::pair<double, double> x) {
+        switch (type) {
+            case FUNCTION_1: {
+                return {f1(x.first), f1(x.second)};
+            }
+            case FUNCTION_2: {
+                double y = f2(x.first, x.second);
+                return {y, y};
+            }
+            case FUNCTION_3: {
+                return f3(x.first, x.second);
+            }
+            case VALUES: {
+                double y_min, y_max;
+                for (const auto& value : values) {
+                    if (value.first > x.first && value.first <= x.second) {
+                        if (std::isnan(y_min) || value.second < y_min) {
+                            y_min = value.second;
+                        }
+                        if (std::isnan(y_max) || value.second < y_max) {
+                            y_max = value.second;
+                        }
+                    }
+                }
+                return {y_min, y_max};
+            }
+            default: {
+                return {NAN, NAN};
+            }
+        }
+    }
+
     std::function<double(double)> f1;
     std::function<double(double, double)> f2;
     std::function<std::pair<double, double>(double, double)> f3;
@@ -82,6 +115,40 @@ struct PlotterAxisParameters {
 struct PlotterAxesParameters {
     PlotterAxisParameters x;
     PlotterAxisParameters y;
+
+    inline const double i_to_x(const int16_t value) const {
+        switch (x.type) {
+            case PlotterAxisParameters::TEMPORAL:
+            case PlotterAxisParameters::LINEAR:
+                return value * x.step + x.min;
+            case PlotterAxisParameters::LOGARITHMIC:
+                return NAN;
+        }
+    }
+    inline const int16_t x_to_i(const double value) const {
+        switch (x.type) {
+            case PlotterAxisParameters::TEMPORAL:
+            case PlotterAxisParameters::LINEAR:
+                return std::round((value - x.min + .5 * x.step) / x.step);
+            case PlotterAxisParameters::LOGARITHMIC:
+                if (value < 0) {
+                    return -1;
+                }
+                return std::round(std::log(value / x.min) / x.step);
+        }
+    }
+    inline const int16_t y_to_j(double value) const {
+        switch (y.type) {
+            case PlotterAxisParameters::TEMPORAL:
+            case PlotterAxisParameters::LINEAR:
+                return std::round((y.max - value) / y.step);
+            case PlotterAxisParameters::LOGARITHMIC:
+                if (value <= 0) {
+                    return -1;
+                }
+                return std::round(std::log((y.max - value) / y.min) / y.step);
+        }
+    }
 
 };
 
@@ -128,30 +195,6 @@ public:
         }
     }
 
-    inline const int16_t x_to_i(const double x) const {
-        switch (_axes.x.type) {
-            case PlotterAxisParameters::TEMPORAL:
-            case PlotterAxisParameters::LINEAR:
-                return std::round((x - _axes.x.min + .5 * _axes.x.step) / _axes.x.step);
-            case PlotterAxisParameters::LOGARITHMIC:
-                if (x < 0) {
-                    return -1;
-                }
-                return std::round(std::log(x / _axes.x.min) / _axes.x.step);
-        }
-    }
-    inline const int16_t y_to_j(double y) const {
-        switch (_axes.y.type) {
-            case PlotterAxisParameters::TEMPORAL:
-            case PlotterAxisParameters::LINEAR:
-                return std::round((_axes.y.max - y - .5 * _axes.y.step) / _axes.y.step);
-            case PlotterAxisParameters::LOGARITHMIC:
-                if (y <= 0) {
-                    return -1;
-                }
-                return _plot_height - 1 - std::round(std::log(y / _axes.y.min) / _axes.y.step);
-        }
-    }
     inline const bool check_ij(const int16_t i, const int16_t j) const {
         if (i < 0 || i >= _plot_width) {
             return false;
@@ -164,7 +207,7 @@ public:
 
     inline void plot_line_vertical(const double& x, const int value) {
         if (x >= _axes.x.min && x <= _axes.x.max) {
-            int16_t i = x_to_i(x);
+            int16_t i = _axes.x_to_i(x);
             if (i >= 0 && i < _plot_width) {
                 for (int16_t j=0; j<_plot_height; ++j) {
                     _plot[j][i] |= value;
@@ -206,7 +249,7 @@ public:
 
     inline void plot_line_horizontal(const double& y, const int value) {
         if (y >= _axes.y.min && y <= _axes.y.max) {
-            int16_t j = y_to_j(y);
+            int16_t j = _axes.y_to_j(y);
             if (j >= 0 && j < _plot_width) {
                 j -= j % 2;
                 for (int16_t i=0; i<_plot_width; ++i) {
@@ -252,8 +295,8 @@ public:
         if (std::isnan(y)) {
             return;
         }
-        const int16_t i = x_to_i(x);
-        const int16_t j = y_to_j(y);
+        const int16_t i = _axes.x_to_i(x);
+        const int16_t j = _axes.y_to_j(y);
         if (!check_ij(i, j)) {
             return;
         }
@@ -569,15 +612,24 @@ public:
         // }
         refresh();
     }
-    virtual void on_mouse_move(const int x, const int y) {
-        mvprintw(3, 1, "%-3d, %-3d", x, y);
+    virtual void on_mouse_move(const int i, const int j) {
+        std::pair<double, double> x = {axes.i_to_x(i), axes.i_to_x(i + 1)};
+        attrset(COLOR_PAIR(0));
+        mvprintw(3, 1, "x ∈ [%lf ; %lf]", x.first, x.second);
+        int n = 0;
+        for (auto& curve : _curves) {
+            const auto y = curve.compute(x);
+            attrset(COLOR_PAIR(curve.color));
+            mvprintw(n + 4, 1, "y%d ∈ [%lf ; %lf]", n, y.first, y.second);
+            ++n;
+        }
     }
 
     inline void start() {
         _is_looping = true;
         show();
         keypad(stdscr, TRUE);
-        mousemask(ALL_MOUSE_EVENTS, NULL);
+        mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
         while (_is_looping) {
             const int c = getch();
             MEVENT mouse_event;
