@@ -12,7 +12,7 @@ public:
 
     inline RandomBot(History& history, Broker& broker, const double& probabity=.1) :
         Bot(history, broker),
-        _probabity(probabity),
+        _probability(probabity),
         _last_price(NAN) {}
 
     virtual std::string get_name() const {
@@ -27,7 +27,7 @@ public:
             decision.price = _last_price;
         }
         _last_price = decision.price;
-        if (rand() > _probabity * (double) RAND_MAX) {
+        if (rand() > _probability * (double) RAND_MAX) {
             decision.type = WAIT;
         } else {
             decision.confidence = rand() / (double) RAND_MAX;
@@ -39,7 +39,7 @@ public:
 
 private:
 
-    const double _probabity;
+    const double _probability;
     double _last_price;
 
 };
