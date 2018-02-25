@@ -146,7 +146,7 @@ struct PlotterAxesParameters {
                 if (value <= 0) {
                     return -1;
                 }
-                return std::round(std::log((y.max - value) / y.min) / y.step);
+                return std::round(std::log(y.max / value) / y.step);
         }
     }
 
