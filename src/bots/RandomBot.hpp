@@ -21,6 +21,7 @@ public:
 
     virtual Decision decide(const Timestamp& timestamp, const Balance& balance) {
         Decision decision;
+        decision.amount = NAN;
         decision.price = _history.get_trade_summary(timestamp - 60., timestamp).average_price;
         if (std::isnan(decision.price)) {
             decision.price = _last_price;
