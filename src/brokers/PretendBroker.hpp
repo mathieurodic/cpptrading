@@ -22,7 +22,7 @@ public:
     }
 
     virtual const double compute_commission(const Trade& trade) {
-        return trade.price * trade.volume * _commission;
+        return fabs(trade.price * trade.volume * _commission);
     }
 
     virtual const std::string get_name() const {
