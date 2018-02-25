@@ -22,6 +22,18 @@ struct Balance {
             commission + other.commission
         );
     }
+    inline Balance& operator += (const Balance& other) {
+        liquidity += other.liquidity;
+        stock += other.stock;
+        commission += other.commission;
+        return *this;
+    }
+    inline Balance& operator /= (const double& other) {
+        liquidity /= other;
+        stock /= other;
+        commission /= other;
+        return *this;
+    }
 
     double liquidity;
     double stock;
