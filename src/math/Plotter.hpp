@@ -82,6 +82,7 @@ struct PlotterAxisParameters {
 struct PlotterAxesParameters {
     PlotterAxisParameters x;
     PlotterAxisParameters y;
+
 };
 
 
@@ -507,16 +508,16 @@ public:
             case 113:
                 _is_looping = false;
                 break;
-            case 65:
+            case KEY_UP:
                 increase(axes.y);
                 break;
-            case 66:
+            case KEY_DOWN:
                 decrease(axes.y);
                 break;
-            case 67:
+            case KEY_RIGHT:
                 increase(axes.x);
                 break;
-            case 68:
+            case KEY_LEFT:
                 decrease(axes.x);
                 break;
             case 43:
@@ -557,25 +558,40 @@ public:
                 }
                 break;
             default:
-                mvprintw(3, 1, "%-3d", key);
                 return;
         }
         show();
-        static std::vector<int> keys;
-        keys.push_back(key);
-        int i = 0;
-        for (auto it=keys.rbegin(); it!=keys.rend() && i<4; ++it, ++i) {
-            mvprintw(3+i, 1, "%-3d", *it);
-        }
+        // static std::vector<int> keys;
+        // keys.push_back(key);
+        // int i = 0;
+        // for (auto it=keys.rbegin(); it!=keys.rend() && i<4; ++it, ++i) {
+        //     mvprintw(3+i, 1, "%-3d", *it);
+        // }
         refresh();
     }
+    virtual void on_mouse_move(const int x, const int y) {
+        mvprintw(3, 1, "%-3d, %-3d", x, y);
+    }
+
     inline void start() {
         _is_looping = true;
         show();
+        keypad(stdscr, TRUE);
+        mousemask(ALL_MOUSE_EVENTS, NULL);
         while (_is_looping) {
             const int c = getch();
-            if (c != ERR) {
-                on_key_press(c);
+            MEVENT mouse_event;
+            switch (c) {
+                case KEY_MOUSE:
+                    if (getmouse(&mouse_event) == OK) {
+                        on_mouse_move(mouse_event.x, mouse_event.y);
+                    }
+                    break;
+                case ERR:
+                    break;
+                default:
+                    on_key_press(c);
+                    break;
             }
             std::this_thread::sleep_for(std::chrono::duration<double>(1e-6));
         }
