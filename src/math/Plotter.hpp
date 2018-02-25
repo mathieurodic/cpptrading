@@ -615,7 +615,11 @@ public:
     virtual void on_mouse_move(const int i, const int j) {
         std::pair<double, double> x = {axes.i_to_x(i), axes.i_to_x(i + 1)};
         attrset(COLOR_PAIR(0));
-        mvprintw(3, 1, "x ∈ [%lf ; %lf]", x.first, x.second);
+        if (axes.x.type == PlotterAxisParameters::TEMPORAL) {
+            mvprintw(3, 1, "x ∈ [%s ; %s]", ((std::string) Timestamp(x.first)).c_str(), ((std::string) Timestamp(x.second)).c_str());
+        } else {
+            mvprintw(3, 1, "x ∈ [%lf ; %lf]", x.first, x.second);
+        }
         int n = 0;
         for (auto& curve : _curves) {
             const auto y = curve.compute(x);
