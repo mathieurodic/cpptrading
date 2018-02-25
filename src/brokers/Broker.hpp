@@ -26,17 +26,22 @@ public:
         if (std::isnan(decision.price)) {
             return false;
         }
+        const Balance balance = get_balance_at_timestamp(decision.timestamp);
         if (std::isnan(decision.amount)) {
             switch (decision.type) {
                 case BUY:
-                    decision.amount = get_balance_at_timestamp(decision.timestamp).liquidity / decision.price;
+                    decision.amount = (balance.liquidity - balance.commission) / decision.price;
                     break;
                 case SELL:
-                    decision.amount = get_balance_at_timestamp(decision.timestamp).stock;
+                    decision.amount = balance.stock / decision.price;
                     break;
                 case WAIT:
+                    decision.amount = 0.;
                     break;
             }
+        }
+        if (balance.liquidity < 0. || decision.amount < 0 || balance.liquidity + balance.stock * decision.price < balance.commission) {
+            return false;
         }
         if (decision.amount == 0.) {
             return false;
